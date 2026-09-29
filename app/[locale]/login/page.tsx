@@ -15,6 +15,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [justRegistered, setJustRegistered] = useState(false);
   const [recoveryWhatsAppNumber, setRecoveryWhatsAppNumber] = useState('94771234567');
@@ -29,13 +31,20 @@ export default function LoginPage() {
     try {
       const res = await fetch('/api/auth');
       const data = await res.json();
-      if (data.isAdmin) {
-        setIsAdmin(true);
+      if (data.isAuthenticated) {
+        setIsAuthenticated(true);
+        setCurrentUser(data.user);
+        setIsAdmin(Boolean(data.isAdmin));
+      } else {
+        setIsAuthenticated(false);
+        setCurrentUser(null);
+        setIsAdmin(false);
       }
       if (data.recoveryWhatsAppNumber) {
         setRecoveryWhatsAppNumber(data.recoveryWhatsAppNumber);
       }
     } catch {
+      setIsAuthenticated(false);
       setIsAdmin(false);
     }
   };
@@ -64,12 +73,10 @@ export default function LoginPage() {
 
       const data = await res.json();
       if (data.success) {
-        if (data.user?.isAdmin) {
-          router.push(`/${locale}/admin`);
-        } else {
-          router.push(`/${locale}`);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('auth-change'));
+          window.location.href = data.user?.isAdmin ? `/${locale}/admin` : `/${locale}`;
         }
-        router.refresh();
       } else {
         setErrorMsg(t('errorInvalid'));
       }
@@ -86,8 +93,13 @@ export default function LoginPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'logout' })
     });
+    setIsAuthenticated(false);
     setIsAdmin(false);
-    router.refresh();
+    setCurrentUser(null);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('auth-change'));
+      window.location.reload();
+    }
   };
 
   // WhatsApp Forgot Password Dispatcher
@@ -124,37 +136,43 @@ export default function LoginPage() {
 
         <div className="text-center space-y-2">
           <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-neutral-200 flex items-center justify-center mx-auto text-[#003399]">
-            {isAdmin ? <ShieldCheck className="w-6 h-6 text-emerald-600" /> : <Lock className="w-6 h-6" />}
+            {isAuthenticated ? <ShieldCheck className="w-6 h-6 text-emerald-600" /> : <Lock className="w-6 h-6" />}
           </div>
           <h1 className="font-condensed text-2xl font-bold text-neutral-900">
-            {isAdmin ? t('loggedInAs') : t('loginTitle')}
+            {isAuthenticated ? (isAdmin ? `${t('loggedInAs')} Admin` : t('loggedInUser')) : t('loginTitle')}
           </h1>
           <p className="text-xs text-neutral-500 max-w-xs mx-auto leading-relaxed">
             {t('loginSubtitle')}
           </p>
         </div>
 
-        {justRegistered && !isAdmin && (
+        {justRegistered && !isAuthenticated && (
           <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center gap-2 font-medium">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
             <span>{t('registerSuccess')}</span>
           </div>
         )}
 
-        {isAdmin ? (
+        {isAuthenticated ? (
           <div className="space-y-4 pt-2">
             <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center gap-2 font-medium">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>{t('loggedInAs')} (admin)</span>
+              <span>
+                {isAdmin
+                  ? `${t('loggedInAs')} Administrator (${currentUser?.username || 'admin'})`
+                  : `${t('loggedInUser')}: ${currentUser?.fullName || currentUser?.username || currentUser?.nic}`}
+              </span>
             </div>
 
             <div className="flex flex-col gap-2.5">
-              <Link
-                href={`/${locale}/admin`}
-                className="w-full py-2.5 px-4 rounded-xl bg-[#003399] hover:bg-[#002266] text-white text-xs font-semibold text-center transition-colors shadow-xs"
-              >
-                Go to Admin Dashboard
-              </Link>
+              {isAdmin && (
+                <Link
+                  href={`/${locale}/admin`}
+                  className="w-full py-2.5 px-4 rounded-xl bg-[#003399] hover:bg-[#002266] text-white text-xs font-semibold text-center transition-colors shadow-xs"
+                >
+                  Go to Admin Dashboard
+                </Link>
+              )}
 
               <Link
                 href={`/${locale}`}

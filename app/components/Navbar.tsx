@@ -77,7 +77,16 @@ export default function Navbar() {
 
   useEffect(() => {
     checkAuth();
-  }, []);
+
+    const handleAuthChange = () => {
+      checkAuth();
+    };
+
+    window.addEventListener('auth-change', handleAuthChange);
+    return () => {
+      window.removeEventListener('auth-change', handleAuthChange);
+    };
+  }, [pathname]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -246,18 +255,24 @@ export default function Navbar() {
             {auth.isAuthenticated ? (
               <div className="flex items-center gap-2">
                 {auth.isAdmin ? (
-                  <Link
-                    href={`/${locale}/admin`}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-[#003399] text-white text-xs font-medium shadow-xs transition-colors border border-neutral-700 whitespace-nowrap"
-                  >
-                    <ShieldCheck className="w-3.5 h-3.5 text-neutral-300" />
-                    <span>{t('dashboard')}</span>
-                  </Link>
+                  <>
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-xs text-emerald-300 font-semibold whitespace-nowrap shadow-xs">
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Administrator</span>
+                    </div>
+                    <Link
+                      href={`/${locale}/admin`}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-[#003399] text-white text-xs font-semibold shadow-xs transition-colors border border-neutral-700 whitespace-nowrap"
+                    >
+                      <span>{t('dashboard')}</span>
+                      <ArrowRight className="w-3.5 h-3.5 text-neutral-400" />
+                    </Link>
+                  </>
                 ) : (
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 border border-white/15 text-xs text-neutral-200 whitespace-nowrap">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 border border-white/15 text-xs text-neutral-200 whitespace-nowrap shadow-xs">
                     <UserIcon className="w-3.5 h-3.5 text-neutral-300" />
-                    <span className="font-medium max-w-[110px] truncate">
-                      {auth.user?.fullName || auth.user?.nic}
+                    <span className="font-semibold max-w-[130px] truncate text-white">
+                      {auth.user?.fullName || auth.user?.username || auth.user?.nic}
                     </span>
                   </div>
                 )}
@@ -391,21 +406,33 @@ export default function Navbar() {
               {auth.isAuthenticated ? (
                 <>
                   {auth.isAdmin ? (
-                    <Link
-                      href={`/${locale}/admin`}
-                      onClick={() => setIsOpen(false)}
-                      className="w-full py-2.5 px-3.5 rounded-lg bg-neutral-800 hover:bg-[#003399] text-white text-xs font-semibold flex items-center justify-between border border-neutral-700 transition-colors"
-                    >
-                      <div className="flex items-center gap-2">
-                        <ShieldCheck className="w-4 h-4 text-neutral-300" />
-                        <span>{t('dashboard')}</span>
+                    <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/30 space-y-2">
+                      <div className="flex items-center gap-2 text-xs text-emerald-300 font-semibold">
+                        <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                        <span>Administrator ({auth.user?.username || 'admin'})</span>
                       </div>
-                      <ArrowRight className="w-3.5 h-3.5 text-neutral-400" />
-                    </Link>
+                      <Link
+                        href={`/${locale}/admin`}
+                        onClick={() => setIsOpen(false)}
+                        className="w-full py-2.5 px-3.5 rounded-lg bg-[#003399] hover:bg-[#002266] text-white text-xs font-semibold flex items-center justify-between transition-colors"
+                      >
+                        <span>{t('dashboard')}</span>
+                        <ArrowRight className="w-3.5 h-3.5 text-neutral-200" />
+                      </Link>
+                    </div>
                   ) : (
-                    <div className="py-2 text-xs text-neutral-300 flex items-center gap-2">
-                      <UserIcon className="w-4 h-4 text-neutral-400" />
-                      <span>{auth.user?.fullName || auth.user?.nic}</span>
+                    <div className="py-2.5 px-3 rounded-xl bg-white/5 border border-white/10 text-xs text-neutral-200 flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-full bg-[#003399]/40 border border-[#003399] flex items-center justify-center text-white shrink-0">
+                        <UserIcon className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-semibold text-white truncate">
+                          {auth.user?.fullName || auth.user?.username || auth.user?.nic}
+                        </span>
+                        <span className="text-[10px] text-neutral-400">
+                          {auth.user?.nic ? `NIC: ${auth.user.nic}` : 'Registered Member'}
+                        </span>
+                      </div>
                     </div>
                   )}
                   <button
@@ -413,7 +440,7 @@ export default function Navbar() {
                       setIsOpen(false);
                       handleLogout();
                     }}
-                    className="w-full py-2 px-4 rounded-xl bg-white/10 text-neutral-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer"
+                    className="w-full py-2 px-4 rounded-xl bg-white/10 text-neutral-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer transition-colors"
                   >
                     <LogOut className="w-3.5 h-3.5" />
                     <span>Log Out</span>

@@ -9,7 +9,7 @@ export async function findUserByNicOrUsername(identifier: string): Promise<User 
   const { data, error } = await supabase
     .from('users')
     .select('id, username, full_name, nic, phone, email, password, role, created_at')
-    .or(`nic.ilike.${clean},username.ilike.${clean},phone.eq.${clean}`)
+    .or(`nic.ilike.${clean},username.ilike.${clean},phone.eq.${clean},email.ilike.${clean}`)
     .limit(1);
 
   if (!error && data && data.length > 0) {
