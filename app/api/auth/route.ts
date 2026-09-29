@@ -18,8 +18,9 @@ function getAuthFromToken(token?: string) {
 }
 
 export async function GET(req: NextRequest) {
-  const token = req.cookies.get('mpcs_auth_token')?.value || req.cookies.get('mpcs_admin_token')?.value;
-  const auth = getAuthFromToken(token);
+  const adminToken = req.cookies.get('mpcs_admin_token')?.value;
+  const userToken = req.cookies.get('mpcs_auth_token')?.value;
+  const auth = (adminToken ? getAuthFromToken(adminToken) : null) || (userToken ? getAuthFromToken(userToken) : null);
   const recoveryWhatsAppNumber = await getRecoveryWhatsAppNumber();
 
   if (!auth) {
@@ -152,20 +153,43 @@ export async function POST(req: NextRequest) {
         fullName: foundUser.full_name || foundUser.username,
         nic: foundUser.nic || foundUser.username,
         phone: foundUser.phone || '',
+        email: foundUser.email || '',
         role: foundUser.role,
         isAdmin
       }
     });
 
-    response.cookies.set({
-      name: isAdmin ? 'mpcs_admin_token' : 'mpcs_auth_token',
-      value: token,
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 60 * 60 * 24 * 30
-    });
+    if (isAdmin) {
+      response.cookies.set({
+        name: 'mpcs_admin_token',
+        value: token,
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 30
+      });
+      response.cookies.set({
+        name: 'mpcs_auth_token',
+        value: token,
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 30
+      });
+    } else {
+      response.cookies.delete('mpcs_admin_token');
+      response.cookies.set({
+        name: 'mpcs_auth_token',
+        value: token,
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 30
+      });
+    }
 
     return response;
   } catch (err) {
