@@ -1,21 +1,39 @@
-import { query } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 import { NewsAnnouncement } from '@/lib/types';
 
 export async function getNewsAnnouncements(publishedOnly: boolean = true): Promise<NewsAnnouncement[]> {
-  const sql = publishedOnly
-    ? `SELECT * FROM news_announcements WHERE is_published = true ORDER BY is_pinned DESC, published_at DESC, created_at DESC;`
-    : `SELECT * FROM news_announcements ORDER BY is_pinned DESC, published_at DESC, created_at DESC;`;
+  let queryBuilder = supabase
+    .from('news_announcements')
+    .select('*')
+    .order('is_pinned', { ascending: false })
+    .order('published_at', { ascending: false })
+    .order('created_at', { ascending: false });
 
-  const rows = await query<NewsAnnouncement>(sql);
-  return rows;
+  if (publishedOnly) {
+    queryBuilder = queryBuilder.eq('is_published', true);
+  }
+
+  const { data, error } = await queryBuilder;
+  if (error) {
+    console.error('Error fetching news announcements from Supabase:', error);
+    return [];
+  }
+
+  return data || [];
 }
 
 export async function getNewsById(id: number): Promise<NewsAnnouncement | null> {
-  const rows = await query<NewsAnnouncement>(
-    `SELECT * FROM news_announcements WHERE id = $1;`,
-    [id]
-  );
-  return rows.length > 0 ? rows[0] : null;
+  const { data, error } = await supabase
+    .from('news_announcements')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return data;
 }
 
 export interface CreateNewsInput {
@@ -33,37 +51,29 @@ export interface CreateNewsInput {
 }
 
 export async function createNewsAnnouncement(data: CreateNewsInput): Promise<NewsAnnouncement> {
-  const rows = await query<NewsAnnouncement>(
-    `INSERT INTO news_announcements (
-      title_si,
-      title_en,
-      description_si,
-      description_en,
-      image_url,
-      category,
-      badge_text_si,
-      badge_text_en,
-      is_pinned,
-      is_published,
-      published_at
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, COALESCE($11, NOW()))
-    RETURNING *;`,
-    [
-      data.title_si,
-      data.title_en,
-      data.description_si,
-      data.description_en,
-      data.image_url || null,
-      data.category || 'general',
-      data.badge_text_si || null,
-      data.badge_text_en || null,
-      Boolean(data.is_pinned),
-      data.is_published !== false,
-      data.published_at || null
-    ]
-  );
+  const { data: inserted, error } = await supabase
+    .from('news_announcements')
+    .insert({
+      title_si: data.title_si,
+      title_en: data.title_en,
+      description_si: data.description_si,
+      description_en: data.description_en,
+      image_url: data.image_url || null,
+      category: data.category || 'general',
+      badge_text_si: data.badge_text_si || null,
+      badge_text_en: data.badge_text_en || null,
+      is_pinned: Boolean(data.is_pinned),
+      is_published: data.is_published !== false,
+      published_at: data.published_at || new Date().toISOString()
+    })
+    .select()
+    .single();
 
-  return rows[0];
+  if (error || !inserted) {
+    throw new Error(error?.message || 'Failed to create news announcement');
+  }
+
+  return inserted;
 }
 
 export interface UpdateNewsInput {
@@ -81,45 +91,47 @@ export interface UpdateNewsInput {
 }
 
 export async function updateNewsAnnouncement(id: number, data: UpdateNewsInput): Promise<NewsAnnouncement | null> {
-  const existing = await getNewsById(id);
-  if (!existing) return null;
+  const updatePayload: any = {
+    updated_at: new Date().toISOString()
+  };
 
-  const rows = await query<NewsAnnouncement>(
-    `UPDATE news_announcements SET
-      title_si = COALESCE($1, title_si),
-      title_en = COALESCE($2, title_en),
-      description_si = COALESCE($3, description_si),
-      description_en = COALESCE($4, description_en),
-      image_url = CASE WHEN $5 IS NOT NULL THEN $5 ELSE image_url END,
-      category = COALESCE($6, category),
-      badge_text_si = CASE WHEN $7 IS NOT NULL THEN $7 ELSE badge_text_si END,
-      badge_text_en = CASE WHEN $8 IS NOT NULL THEN $8 ELSE badge_text_en END,
-      is_pinned = COALESCE($9, is_pinned),
-      is_published = COALESCE($10, is_published),
-      published_at = COALESCE($11, published_at),
-      updated_at = NOW()
-    WHERE id = $12
-    RETURNING *;`,
-    [
-      data.title_si,
-      data.title_en,
-      data.description_si,
-      data.description_en,
-      data.image_url !== undefined ? data.image_url : null,
-      data.category,
-      data.badge_text_si !== undefined ? data.badge_text_si : null,
-      data.badge_text_en !== undefined ? data.badge_text_en : null,
-      data.is_pinned !== undefined ? data.is_pinned : null,
-      data.is_published !== undefined ? data.is_published : null,
-      data.published_at || null,
-      id
-    ]
-  );
+  if (data.title_si !== undefined) updatePayload.title_si = data.title_si;
+  if (data.title_en !== undefined) updatePayload.title_en = data.title_en;
+  if (data.description_si !== undefined) updatePayload.description_si = data.description_si;
+  if (data.description_en !== undefined) updatePayload.description_en = data.description_en;
+  if (data.image_url !== undefined) updatePayload.image_url = data.image_url;
+  if (data.category !== undefined) updatePayload.category = data.category;
+  if (data.badge_text_si !== undefined) updatePayload.badge_text_si = data.badge_text_si;
+  if (data.badge_text_en !== undefined) updatePayload.badge_text_en = data.badge_text_en;
+  if (data.is_pinned !== undefined) updatePayload.is_pinned = data.is_pinned;
+  if (data.is_published !== undefined) updatePayload.is_published = data.is_published;
+  if (data.published_at !== undefined) updatePayload.published_at = data.published_at;
 
-  return rows.length > 0 ? rows[0] : null;
+  const { data: updated, error } = await supabase
+    .from('news_announcements')
+    .update(updatePayload)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error || !updated) {
+    console.error('Error updating news announcement in Supabase:', error);
+    return null;
+  }
+
+  return updated;
 }
 
 export async function deleteNewsAnnouncement(id: number): Promise<boolean> {
-  const res = await query(`DELETE FROM news_announcements WHERE id = $1 RETURNING id;`, [id]);
-  return res.length > 0;
+  const { error } = await supabase
+    .from('news_announcements')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('Error deleting news announcement from Supabase:', error);
+    return false;
+  }
+
+  return true;
 }

@@ -1,4 +1,4 @@
-import { query } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 import { getSetting, setSetting } from './setting';
 
 export interface LiveStats {
@@ -37,37 +37,37 @@ export interface BusinessRecord {
  * Retrieve aggregated real-time statistics for the frontend counter
  */
 export async function getLiveStats(): Promise<LiveStats> {
-  // 1. Members count: count from imported_members
-  const membersRes = await query<{ count: string }>(`
-    SELECT COUNT(*)::text AS count FROM imported_members;
-  `);
-  let membersCount = parseInt(membersRes[0]?.count || '0', 10);
+  // Execute all count queries concurrently for maximum speed
+  const [
+    { count: membersResCount },
+    { count: votersCountRes },
+    { count: businessesCountRes },
+    yearsSetting
+  ] = await Promise.all([
+    supabase.from('imported_members').select('*', { count: 'exact', head: true }),
+    supabase.from('eligible_voters').select('*', { count: 'exact', head: true }),
+    supabase.from('businesses').select('*', { count: 'exact', head: true }).eq('is_active', true),
+    getSetting('years_of_service', '50')
+  ]);
+
+  let membersCount = membersResCount || 0;
 
   // If no imported members yet, fall back to registered users count as initial baseline
   if (membersCount === 0) {
-    const usersRes = await query<{ count: string }>(`
-      SELECT COUNT(*)::text AS count FROM users WHERE role = 'user';
-    `);
-    membersCount = parseInt(usersRes[0]?.count || '0', 10);
+    const { count: usersCount } = await supabase
+      .from('users')
+      .select('*', { count: 'exact', head: true })
+      .eq('role', 'user');
+
+    membersCount = usersCount || 0;
   }
 
-  // 2. Eligible voters count from eligible_voters
-  const votersRes = await query<{ count: string }>(`
-    SELECT COUNT(*)::text AS count FROM eligible_voters;
-  `);
-  const votersCount = parseInt(votersRes[0]?.count || '0', 10);
-
-  // 3. Registered businesses count
-  const businessesRes = await query<{ count: string }>(`
-    SELECT COUNT(*)::text AS count FROM businesses WHERE is_active = true;
-  `);
-  let businessesCount = parseInt(businessesRes[0]?.count || '0', 10);
+  const votersCount = votersCountRes || 0;
+  let businessesCount = businessesCountRes || 0;
   if (businessesCount === 0) {
     businessesCount = 10; // 10 core cooperative divisions
   }
 
-  // 4. Years of service from settings
-  const yearsSetting = await getSetting('years_of_service', '50');
   const yearsOfService = parseInt(yearsSetting, 10) || 50;
 
   return {
@@ -87,26 +87,36 @@ export async function importMembers(
   mode: 'append' | 'replace' = 'append'
 ): Promise<number> {
   if (mode === 'replace') {
-    await query(`TRUNCATE TABLE imported_members RESTART IDENTITY;`);
+    await supabase.from('imported_members').delete().neq('id', 0);
   }
 
-  for (const r of records) {
-    if (!r.fullName || !r.fullName.trim()) continue;
-    await query(`
-      INSERT INTO imported_members (member_number, full_name, nic, phone, imported_at)
-      VALUES ($1, $2, $3, $4, NOW());
-    `, [
-      r.memberNumber?.trim() || null,
-      r.fullName.trim(),
-      r.nic?.trim().toUpperCase() || null,
-      r.phone?.trim() || null
-    ]);
+  const validRows = records
+    .filter(r => r.fullName && r.fullName.trim().length > 0)
+    .map(r => ({
+      member_number: r.memberNumber?.trim() || null,
+      full_name: r.fullName.trim(),
+      nic: r.nic?.trim().toUpperCase() || null,
+      phone: r.phone?.trim() || null,
+      imported_at: new Date().toISOString()
+    }));
+
+  if (validRows.length > 0) {
+    // Insert in chunks of 200 for optimal performance
+    const chunkSize = 200;
+    for (let i = 0; i < validRows.length; i += chunkSize) {
+      const chunk = validRows.slice(i, i + chunkSize);
+      const { error } = await supabase.from('imported_members').insert(chunk);
+      if (error) {
+        console.error('Error batch inserting imported members:', error);
+      }
+    }
   }
 
-  const res = await query<{ count: string }>(`
-    SELECT COUNT(*)::text AS count FROM imported_members;
-  `);
-  return parseInt(res[0]?.count || '0', 10);
+  const { count } = await supabase
+    .from('imported_members')
+    .select('*', { count: 'exact', head: true });
+
+  return count || 0;
 }
 
 /**
@@ -117,26 +127,99 @@ export async function uploadEligibleVoters(
   mode: 'append' | 'replace' = 'append'
 ): Promise<number> {
   if (mode === 'replace') {
-    await query(`TRUNCATE TABLE eligible_voters RESTART IDENTITY;`);
+    await supabase.from('eligible_voters').delete().neq('id', 0);
   }
 
-  for (const r of records) {
-    if (!r.fullName || !r.fullName.trim()) continue;
-    await query(`
-      INSERT INTO eligible_voters (voter_number, full_name, nic, division, uploaded_at)
-      VALUES ($1, $2, $3, $4, NOW());
-    `, [
-      r.voterNumber?.trim() || null,
-      r.fullName.trim(),
-      r.nic?.trim().toUpperCase() || null,
-      r.division?.trim() || null
-    ]);
+  const validRows = records
+    .filter(r => r.fullName && r.fullName.trim().length > 0)
+    .map(r => ({
+      voter_number: r.voterNumber?.trim() || null,
+      full_name: r.fullName.trim(),
+      nic: r.nic?.trim().toUpperCase() || null,
+      division: r.division?.trim() || null,
+      uploaded_at: new Date().toISOString()
+    }));
+
+  if (validRows.length > 0) {
+    const chunkSize = 200;
+    for (let i = 0; i < validRows.length; i += chunkSize) {
+      const chunk = validRows.slice(i, i + chunkSize);
+      const { error } = await supabase.from('eligible_voters').insert(chunk);
+      if (error) {
+        console.error('Error batch inserting eligible voters:', error);
+      }
+    }
   }
 
-  const res = await query<{ count: string }>(`
-    SELECT COUNT(*)::text AS count FROM eligible_voters;
-  `);
-  return parseInt(res[0]?.count || '0', 10);
+  const { count } = await supabase
+    .from('eligible_voters')
+    .select('*', { count: 'exact', head: true });
+
+  return count || 0;
+}
+
+/**
+ * Query imported members with optional search query and pagination
+ */
+export async function getImportedMembersList(
+  search?: string,
+  limit: number = 50,
+  offset: number = 0
+): Promise<{ members: any[]; total: number }> {
+  const sanitizedLimit = Math.min(Math.max(limit, 1), 100);
+  const sanitizedOffset = Math.max(offset, 0);
+
+  let query = supabase
+    .from('imported_members')
+    .select('id, member_number, full_name, nic, phone, imported_at', { count: 'exact' });
+
+  if (search && search.trim()) {
+    const term = search.trim();
+    query = query.or(`full_name.ilike.%${term}%,nic.ilike.%${term}%,member_number.ilike.%${term}%`);
+  }
+
+  const { data, count, error } = await query
+    .order('id', { ascending: true })
+    .range(sanitizedOffset, sanitizedOffset + sanitizedLimit - 1);
+
+  if (error || !data) {
+    console.error('Error fetching imported members list:', error);
+    return { members: [], total: 0 };
+  }
+
+  return { members: data, total: count || 0 };
+}
+
+/**
+ * Query eligible voters with optional search query and pagination
+ */
+export async function getEligibleVotersList(
+  search?: string,
+  limit: number = 50,
+  offset: number = 0
+): Promise<{ voters: any[]; total: number }> {
+  const sanitizedLimit = Math.min(Math.max(limit, 1), 100);
+  const sanitizedOffset = Math.max(offset, 0);
+
+  let query = supabase
+    .from('eligible_voters')
+    .select('id, voter_number, full_name, nic, division, uploaded_at', { count: 'exact' });
+
+  if (search && search.trim()) {
+    const term = search.trim();
+    query = query.or(`full_name.ilike.%${term}%,nic.ilike.%${term}%,voter_number.ilike.%${term}%,division.ilike.%${term}%`);
+  }
+
+  const { data, count, error } = await query
+    .order('id', { ascending: true })
+    .range(sanitizedOffset, sanitizedOffset + sanitizedLimit - 1);
+
+  if (error || !data) {
+    console.error('Error fetching eligible voters list:', error);
+    return { voters: [], total: 0 };
+  }
+
+  return { voters: data, total: count || 0 };
 }
 
 /**
@@ -156,21 +239,14 @@ export async function setYearsOfService(years: number | string): Promise<void> {
  * Businesses management
  */
 export async function getAllBusinesses(): Promise<BusinessRecord[]> {
-  const rows = await query<{
-    id: number;
-    key: string;
-    title_si: string;
-    title_en: string;
-    manager: string | null;
-    hotline: string | null;
-    is_active: boolean;
-  }>(`
-    SELECT id, key, title_si, title_en, manager, hotline, is_active
-    FROM businesses
-    ORDER BY id ASC;
-  `);
+  const { data, error } = await supabase
+    .from('businesses')
+    .select('id, key, title_si, title_en, manager, hotline, is_active')
+    .order('id', { ascending: true });
 
-  return rows.map(r => ({
+  if (error || !data) return [];
+
+  return data.map(r => ({
     id: r.id,
     key: r.key,
     titleSi: r.title_si,

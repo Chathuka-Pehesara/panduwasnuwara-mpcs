@@ -42,12 +42,14 @@ export async function GET(req: NextRequest) {
       fullName: user.full_name || user.username,
       nic: user.nic || user.username,
       phone: user.phone || '',
+      email: user.email || '',
       role: user.role
     } : {
       username: auth.username,
       fullName: auth.username,
       nic: auth.username,
       phone: '',
+      email: '',
       role: auth.role
     },
     recoveryWhatsAppNumber

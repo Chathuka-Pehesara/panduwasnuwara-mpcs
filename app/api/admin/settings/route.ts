@@ -1,27 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getRecoveryWhatsAppNumber, setSetting } from '@/lib/models/setting';
+import {
+  getRecoveryWhatsAppNumber,
+  setSetting,
+  getContactDestinationEmail1,
+  getContactDestinationEmail2
+} from '@/lib/models/setting';
 import { getYearsOfService, setYearsOfService } from '@/lib/models/stats';
-
-function isAdmin(req: NextRequest): boolean {
-  const token = req.cookies.get('mpcs_admin_token')?.value || req.cookies.get('mpcs_auth_token')?.value;
-  if (!token) return false;
-  try {
-    const parts = token.split('_');
-    return parts.length >= 3 && parts[2] === 'admin';
-  } catch {
-    return false;
-  }
-}
+import { requireAdmin } from '@/lib/auth';
 
 export async function GET() {
   try {
     const recoveryWhatsAppNumber = await getRecoveryWhatsAppNumber();
     const yearsOfService = await getYearsOfService();
+    const contactEmail1 = await getContactDestinationEmail1();
+    const contactEmail2 = await getContactDestinationEmail2();
+    const hasSmtpConfigured = Boolean(process.env.SMTP_USER && process.env.SMTP_PASS);
+
     return NextResponse.json({
       success: true,
       settings: {
         recoveryWhatsAppNumber,
-        yearsOfService
+        yearsOfService,
+        contactEmail1,
+        contactEmail2,
+        hasSmtpConfigured
       }
     });
   } catch (err) {
@@ -31,13 +33,12 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
-  if (!isAdmin(req)) {
-    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-  }
+  const { auth, errorResponse } = await requireAdmin(req);
+  if (errorResponse) return errorResponse;
 
   try {
     const body = await req.json();
-    const { recoveryWhatsAppNumber, yearsOfService } = body;
+    const { recoveryWhatsAppNumber, yearsOfService, contactEmail1, contactEmail2 } = body;
 
     if (recoveryWhatsAppNumber !== undefined) {
       // Strip non-digit characters except leading plus
@@ -49,9 +50,18 @@ export async function PUT(req: NextRequest) {
       await setYearsOfService(yearsOfService);
     }
 
+    if (contactEmail1 !== undefined) {
+      await setSetting('contact_destination_email_1', (contactEmail1 || '').trim());
+    }
+
+    if (contactEmail2 !== undefined) {
+      await setSetting('contact_destination_email_2', (contactEmail2 || '').trim());
+    }
+
     return NextResponse.json({ success: true, message: 'Settings updated successfully' });
   } catch (err) {
     console.error('Error updating settings:', err);
     return NextResponse.json({ success: false, error: 'Failed to update settings' }, { status: 500 });
   }
 }
+

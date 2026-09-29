@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useTranslations, useLocale } from 'next-intl';
@@ -20,6 +20,8 @@ export interface BusinessService {
   titleEn: string;
   taglineSi: string;
   taglineEn: string;
+  categorySi?: string;
+  categoryEn?: string;
   descriptionSi: string;
   descriptionEn: string;
   services: string[];
@@ -28,6 +30,7 @@ export interface BusinessService {
   location: string;
   hotline: string;
   imageSrc: string;
+  coverImage?: string;
   isNew?: boolean;
 }
 
@@ -293,6 +296,37 @@ export default function BusinessesSection() {
   const locale = useLocale();
   const isSi = locale === 'si';
   const [selectedBusiness, setSelectedBusiness] = useState<BusinessService | null>(null);
+  const [liveBusinesses, setLiveBusinesses] = useState<BusinessService[]>(businessesData);
+
+  useEffect(() => {
+    fetch('/api/businesses')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && Array.isArray(data.businesses) && data.businesses.length > 0) {
+          const mapped: BusinessService[] = data.businesses.map((b: any) => ({
+            key: b.key,
+            titleSi: b.title_si,
+            titleEn: b.title_en,
+            taglineSi: b.tagline_si || '',
+            taglineEn: b.tagline_en || '',
+            categorySi: b.category_si || '',
+            categoryEn: b.category_en || '',
+            descriptionSi: b.description_si || '',
+            descriptionEn: b.description_en || '',
+            manager: b.manager || '',
+            location: b.location || '',
+            hotline: b.hotline || '',
+            imageSrc: b.image_src || '/logo-photo.jpg',
+            coverImage: b.cover_image || '',
+            isNew: Boolean(b.is_new),
+            services: Array.isArray(b.services) ? b.services : [],
+            servicesEn: Array.isArray(b.services_en) ? b.services_en : []
+          }));
+          setLiveBusinesses(mapped);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Category details
   const getCategoryTheme = (key: string) => {
@@ -363,8 +397,11 @@ export default function BusinessesSection() {
 
         {/* 1. Responsive 3-Column Grid */}
         <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {businessesData.map((item, index) => {
+          {liveBusinesses.map((item, index) => {
             const theme = getCategoryTheme(item.key);
+            const categoryLabel = isSi 
+              ? (item.categorySi || theme.categorySi) 
+              : (item.categoryEn || theme.category);
 
             return (
               <div
@@ -376,7 +413,7 @@ export default function BusinessesSection() {
                   <div className="flex items-center justify-between gap-2 mb-3.5">
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full border bg-slate-100 text-slate-700 border-slate-200">
-                        {isSi ? theme.categorySi : theme.category}
+                        {categoryLabel}
                       </span>
                       {item.isNew && (
                         <span className="inline-flex items-center text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-400 text-slate-950 shadow-2xs font-mono">

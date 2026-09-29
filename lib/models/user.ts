@@ -1,19 +1,22 @@
-import { query } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 import { User } from '@/lib/types';
 
 export async function findUserByNicOrUsername(identifier: string): Promise<User | null> {
   const clean = identifier.trim();
-  const rows = await query<User>(`
-    SELECT id, username, full_name, nic, phone, email, password, role, created_at
-    FROM users
-    WHERE LOWER(nic) = LOWER($1) 
-       OR LOWER(username) = LOWER($1)
-       OR (phone IS NOT NULL AND phone = $1);
-  `, [clean]);
+  if (!clean) return null;
 
-  if (rows.length > 0) return rows[0];
+  // Search users table by NIC, username, or phone
+  const { data, error } = await supabase
+    .from('users')
+    .select('id, username, full_name, nic, phone, email, password, role, created_at')
+    .or(`nic.ilike.${clean},username.ilike.${clean},phone.eq.${clean}`)
+    .limit(1);
 
-  // Fallback check for admin
+  if (!error && data && data.length > 0) {
+    return data[0] as User;
+  }
+
+  // Fallback check for admin in admin_users
   interface AdminRow {
     id: number;
     username: string;
@@ -21,14 +24,15 @@ export async function findUserByNicOrUsername(identifier: string): Promise<User 
     role: string;
     created_at: string;
   }
-  const adminRows = await query<AdminRow>(`
-    SELECT id, username, password, role, created_at
-    FROM admin_users
-    WHERE LOWER(username) = LOWER($1);
-  `, [clean]);
 
-  if (adminRows.length > 0) {
-    const admin = adminRows[0];
+  const { data: adminData, error: adminError } = await supabase
+    .from('admin_users')
+    .select('id, username, password, role, created_at')
+    .ilike('username', clean)
+    .limit(1);
+
+  if (!adminError && adminData && adminData.length > 0) {
+    const admin = adminData[0] as AdminRow;
     return {
       id: admin.id,
       username: admin.username,
@@ -45,20 +49,24 @@ export async function findUserByNicOrUsername(identifier: string): Promise<User 
 }
 
 export async function findUserById(id: number): Promise<User | null> {
-  const rows = await query<User>(`
-    SELECT id, username, full_name, nic, phone, email, role, created_at
-    FROM users
-    WHERE id = $1;
-  `, [id]);
-  return rows[0] || null;
+  const { data, error } = await supabase
+    .from('users')
+    .select('id, username, full_name, nic, phone, email, role, created_at')
+    .eq('id', id)
+    .single();
+
+  if (error || !data) return null;
+  return data as User;
 }
 
 export async function getAllUsers(): Promise<Omit<User, 'password'>[]> {
-  return await query<Omit<User, 'password'>>(`
-    SELECT id, username, full_name, nic, phone, email, role, created_at
-    FROM users
-    ORDER BY created_at DESC;
-  `);
+  const { data, error } = await supabase
+    .from('users')
+    .select('id, username, full_name, nic, phone, email, role, created_at')
+    .order('created_at', { ascending: false });
+
+  if (error || !data) return [];
+  return data as Omit<User, 'password'>[];
 }
 
 export async function createUser(params: {
@@ -73,13 +81,25 @@ export async function createUser(params: {
   const cleanPhone = params.phone.trim();
   const username = cleanNic.toLowerCase();
 
-  const rows = await query<User>(`
-    INSERT INTO users (username, full_name, nic, phone, email, password, role)
-    VALUES ($1, $2, $3, $4, $5, $6, 'user')
-    RETURNING id, username, full_name, nic, phone, email, role, created_at;
-  `, [username, cleanName, cleanNic, cleanPhone, params.email?.trim() || null, params.password]);
+  const { data, error } = await supabase
+    .from('users')
+    .insert({
+      username,
+      full_name: cleanName,
+      nic: cleanNic,
+      phone: cleanPhone,
+      email: params.email?.trim() || null,
+      password: params.password,
+      role: 'user'
+    })
+    .select('id, username, full_name, nic, phone, email, role, created_at')
+    .single();
 
-  return rows[0];
+  if (error || !data) {
+    throw new Error(error?.message || 'Failed to create user');
+  }
+
+  return data as User;
 }
 
 export async function updateUser(
@@ -92,47 +112,45 @@ export async function updateUser(
     password?: string;
   }
 ): Promise<User | null> {
-  const fields: string[] = [];
-  const values: unknown[] = [];
-  let idx = 1;
+  const updates: Record<string, unknown> = {};
 
   if (params.fullName !== undefined) {
-    fields.push(`full_name = $${idx++}`);
-    values.push(params.fullName.trim());
+    updates.full_name = params.fullName.trim();
   }
   if (params.nic !== undefined) {
-    fields.push(`nic = $${idx++}`);
-    values.push(params.nic.trim());
-    fields.push(`username = $${idx++}`);
-    values.push(params.nic.trim().toLowerCase());
+    updates.nic = params.nic.trim();
+    updates.username = params.nic.trim().toLowerCase();
   }
   if (params.phone !== undefined) {
-    fields.push(`phone = $${idx++}`);
-    values.push(params.phone.trim());
+    updates.phone = params.phone.trim();
   }
   if (params.role !== undefined) {
-    fields.push(`role = $${idx++}`);
-    values.push(params.role);
+    updates.role = params.role;
   }
   if (params.password && params.password.trim().length > 0) {
-    fields.push(`password = $${idx++}`);
-    values.push(params.password.trim());
+    updates.password = params.password.trim();
   }
 
-  if (fields.length === 0) return await findUserById(id);
+  if (Object.keys(updates).length === 0) {
+    return await findUserById(id);
+  }
 
-  values.push(id);
-  const rows = await query<User>(`
-    UPDATE users
-    SET ${fields.join(', ')}
-    WHERE id = $${idx}
-    RETURNING id, username, full_name, nic, phone, email, role, created_at;
-  `, values);
+  const { data, error } = await supabase
+    .from('users')
+    .update(updates)
+    .eq('id', id)
+    .select('id, username, full_name, nic, phone, email, role, created_at')
+    .single();
 
-  return rows[0] || null;
+  if (error || !data) return null;
+  return data as User;
 }
 
 export async function deleteUser(id: number): Promise<boolean> {
-  const res = await query(`DELETE FROM users WHERE id = $1 RETURNING id;`, [id]);
-  return res.length > 0;
+  const { error } = await supabase
+    .from('users')
+    .delete()
+    .eq('id', id);
+
+  return !error;
 }

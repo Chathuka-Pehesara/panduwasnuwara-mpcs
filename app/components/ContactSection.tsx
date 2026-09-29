@@ -2,13 +2,13 @@
 
 import React, { useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { 
-  MapPin, 
-  Phone, 
-  Mail, 
-  Clock, 
-  Send, 
-  CheckCircle2, 
+import {
+  MapPin,
+  Phone,
+  Mail,
+  Clock,
+  Send,
+  CheckCircle2,
   Building2,
   AlertCircle
 } from 'lucide-react';
@@ -34,6 +34,7 @@ export default function ContactSection() {
     { key: 'fuel-station', titleEn: 'Co-op Fuel Station', titleSi: 'ඉන්ධන පිරවුම්හල' },
     { key: 'commercial-agency', titleEn: 'Commercial Product Agencies', titleSi: 'වාණිජ නියෝජිතායතන' },
     { key: 'funeral', titleEn: 'Funeral Care Services', titleSi: 'අවමංගල්‍ය සේවා අංශය' },
+    { key: 'other', titleEn: 'Other', titleSi: 'වෙනත්' }
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -76,12 +77,12 @@ export default function ContactSection() {
   };
 
   return (
-    <section 
-      id="contact" 
+    <section
+      id="contact"
       className="w-full bg-[#f8fafc] py-16 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 font-sans scroll-mt-20 border-t border-neutral-200/80"
     >
       <div className="max-w-6xl mx-auto space-y-12">
-        
+
         {/* Section Header */}
         <div className="space-y-2.5 max-w-3xl">
           <div className="flex items-center gap-2.5">
@@ -102,7 +103,7 @@ export default function ContactSection() {
 
         {/* 2-Column Layout: Contact Details & Interactive Form */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
+
           {/* Left Column: Official Contact Information */}
           <div className="lg:col-span-5 bg-white rounded-2xl sm:rounded-3xl border border-neutral-200/90 p-6 sm:p-8 shadow-xs space-y-6">
             <div className="flex items-center gap-3 pb-4 border-b border-neutral-100">
@@ -178,7 +179,7 @@ export default function ContactSection() {
                 {isSi ? 'විමසීම් පෝරමය' : 'Send an Inquiry or Message'}
               </h3>
               <p className="text-xs sm:text-sm text-neutral-500 mt-1">
-                {isSi 
+                {isSi
                   ? 'ඔබගේ පණිවිඩය අදාළ අංශයේ නිල කළමනාකාරීත්වය වෙත කෙලින්ම යොමු කෙරේ.'
                   : 'Messages are automatically categorized and routed to our administrative inbox.'}
               </p>
@@ -296,8 +297,8 @@ export default function ContactSection() {
                 >
                   <Send className="w-3.5 h-3.5" />
                   <span>
-                    {isSubmitting 
-                      ? (isSi ? 'යොමු වෙමින්...' : 'Submitting...') 
+                    {isSubmitting
+                      ? (isSi ? 'යොමු වෙමින්...' : 'Submitting...')
                       : (isSi ? 'විමසීම යොමු කරන්න' : 'Submit Official Inquiry')}
                   </span>
                 </button>

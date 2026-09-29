@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createInquiry, getInquiries, getInquiryCategoryCounts } from '@/lib/models/inquiry';
 import { findUserByNicOrUsername } from '@/lib/models/user';
+import { sendContactNotificationEmail } from '@/lib/email';
 
 function getAuthFromToken(token?: string) {
   if (!token) return null;
@@ -49,6 +50,18 @@ export async function POST(req: NextRequest) {
       email: email?.trim() || null,
       subject: subject.trim(),
       message: message.trim()
+    });
+
+    // Trigger email notification to destination emails configured in Admin Panel
+    sendContactNotificationEmail({
+      name: user_name.trim(),
+      email: email?.trim() || null,
+      phone: phone.trim(),
+      subject: subject.trim(),
+      message: message.trim(),
+      businessName: business_name?.trim()
+    }).catch(err => {
+      console.error('Background email dispatch error:', err);
     });
 
     return NextResponse.json({ success: true, inquiry }, { status: 201 });

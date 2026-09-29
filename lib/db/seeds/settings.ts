@@ -1,17 +1,29 @@
-import { query } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 
 export async function seedSettings(): Promise<void> {
-  // Default WhatsApp recovery/support contact number
-  await query(`
-    INSERT INTO settings (key, value)
-    VALUES ('recovery_whatsapp_number', '94771234567')
-    ON CONFLICT (key) DO NOTHING;
-  `);
+  const { data: whatsappSetting } = await supabase
+    .from('settings')
+    .select('key')
+    .eq('key', 'recovery_whatsapp_number')
+    .maybeSingle();
 
-  // Default Years of Service
-  await query(`
-    INSERT INTO settings (key, value)
-    VALUES ('years_of_service', '50')
-    ON CONFLICT (key) DO NOTHING;
-  `);
+  if (!whatsappSetting) {
+    await supabase.from('settings').insert({
+      key: 'recovery_whatsapp_number',
+      value: '94771234567'
+    });
+  }
+
+  const { data: yearsSetting } = await supabase
+    .from('settings')
+    .select('key')
+    .eq('key', 'years_of_service')
+    .maybeSingle();
+
+  if (!yearsSetting) {
+    await supabase.from('settings').insert({
+      key: 'years_of_service',
+      value: '50'
+    });
+  }
 }

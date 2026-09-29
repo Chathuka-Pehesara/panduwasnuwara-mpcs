@@ -1,20 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAllFuelPrices, updateFuelPrice, updateAllFuelPrices } from '@/lib/models/fuelPrice';
-
-function getAuthFromToken(token?: string) {
-  if (!token) return null;
-  try {
-    const parts = token.split('_');
-    if (parts.length >= 3 && parts[0] === 'session') {
-      const username = decodeURIComponent(parts[1]);
-      const role = parts[2];
-      return { username, role, isAdmin: role === 'admin' };
-    }
-  } catch (err) {
-    console.error('Error parsing token:', err);
-  }
-  return null;
-}
+import { requireAdmin } from '@/lib/auth';
 
 export async function GET() {
   try {
@@ -28,11 +14,8 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const token = req.cookies.get('auth_token')?.value;
-    const auth = getAuthFromToken(token);
-    if (!auth || !auth.isAdmin) {
-      return NextResponse.json({ success: false, error: 'Unauthorized: Admin access required' }, { status: 401 });
-    }
+    const { auth, errorResponse } = await requireAdmin(req);
+    if (errorResponse) return errorResponse;
 
     const body = await req.json();
 
@@ -57,3 +40,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+
+export const PUT = POST;

@@ -2,6 +2,9 @@ import {NextIntlClientProvider} from "next-intl";
 import {getMessages} from "next-intl/server";
 import Navbar from "@/app/components/Navbar";
 import Footer from "@/app/components/Footer";
+import { MembershipProvider } from "@/app/context/MembershipContext";
+import MembershipModals from "@/app/components/MembershipModals";
+import GuestHeartbeat from "@/app/components/GuestHeartbeat";
 
 export default async function LocaleLayout({
   children,
@@ -13,9 +16,13 @@ export default async function LocaleLayout({
   return (
     <div className="min-h-screen flex flex-col justify-between">
       <NextIntlClientProvider messages={messages}>
-        <Navbar />
-        <main className="flex-grow">{children}</main>
-        <Footer />
+        <MembershipProvider>
+          <GuestHeartbeat />
+          <Navbar />
+          <main className="flex-grow">{children}</main>
+          <Footer />
+          <MembershipModals />
+        </MembershipProvider>
       </NextIntlClientProvider>
     </div>
   );

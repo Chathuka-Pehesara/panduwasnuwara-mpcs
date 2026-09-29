@@ -68,6 +68,31 @@ export interface Inquiry {
   updated_at: string;
 }
 
+export interface BusinessItem {
+  id: number;
+  key: string;
+  title_si: string;
+  title_en: string;
+  tagline_si?: string | null;
+  tagline_en?: string | null;
+  category_si?: string | null;
+  category_en?: string | null;
+  description_si?: string | null;
+  description_en?: string | null;
+  manager?: string | null;
+  location?: string | null;
+  hotline?: string | null;
+  image_src?: string | null;
+  cover_image?: string | null;
+  is_new?: boolean;
+  is_active?: boolean;
+  display_order?: number;
+  services?: string[];
+  services_en?: string[];
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface BusinessServiceItem {
   id: number;
   business_key: string;
@@ -89,5 +114,40 @@ export interface FuelPrice {
   name_si: string;
   price_per_liter: number;
   updated_at: string;
+}
+
+export interface MembershipApplication {
+  id: number;
+  user_id?: number | null;
+  full_name_si: string;
+  full_name_en: string;
+  address: string;
+  postal_address: string;
+  nic: string;
+  phone: string;
+  email?: string | null;
+  certified_form_photo: string;
+  status: 'pending' | 'approved' | 'rejected';
+  admin_notes?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ImportedMember {
+  id: number;
+  member_number?: string | null;
+  full_name: string;
+  nic?: string | null;
+  phone?: string | null;
+  imported_at: string;
+}
+
+export interface EligibleVoter {
+  id: number;
+  voter_number?: string | null;
+  full_name: string;
+  nic?: string | null;
+  division?: string | null;
+  uploaded_at: string;
 }
 

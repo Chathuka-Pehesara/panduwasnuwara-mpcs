@@ -12,11 +12,13 @@ import {
   Clock, 
   ShieldCheck
 } from 'lucide-react';
+import { useMembership } from '@/app/context/MembershipContext';
 
 export default function Footer() {
   const t = useTranslations('Footer');
   const locale = useLocale();
   const pathname = usePathname();
+  const { openModal } = useMembership();
 
   if (pathname?.includes('/admin')) {
     return null;
@@ -119,22 +121,34 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/members" className="text-slate-400 hover:text-amber-400 transition-colors inline-flex items-center gap-2 group">
+                <button 
+                  type="button"
+                  onClick={() => openModal('members')} 
+                  className="text-slate-400 hover:text-amber-400 transition-colors inline-flex items-center gap-2 group cursor-pointer text-left"
+                >
                   <span className="text-amber-400/50 group-hover:text-amber-400 group-hover:translate-x-0.5 transition-all text-sm">›</span>
                   <span>{t('linkMembers')}</span>
-                </Link>
+                </button>
               </li>
               <li>
-                <Link href="/members?list=voters" className="text-slate-400 hover:text-amber-400 transition-colors inline-flex items-center gap-2 group">
+                <button 
+                  type="button"
+                  onClick={() => openModal('voters')} 
+                  className="text-slate-400 hover:text-amber-400 transition-colors inline-flex items-center gap-2 group cursor-pointer text-left"
+                >
                   <span className="text-amber-400/50 group-hover:text-amber-400 group-hover:translate-x-0.5 transition-all text-sm">›</span>
                   <span>{t('linkVoters')}</span>
-                </Link>
+                </button>
               </li>
               <li>
-                <Link href="/apply" className="text-slate-400 hover:text-amber-400 transition-colors inline-flex items-center gap-2 group">
+                <button 
+                  type="button"
+                  onClick={() => openModal('apply')} 
+                  className="text-slate-400 hover:text-amber-400 transition-colors inline-flex items-center gap-2 group cursor-pointer text-left"
+                >
                   <span className="text-amber-400/50 group-hover:text-amber-400 group-hover:translate-x-0.5 transition-all text-sm">›</span>
                   <span>{t('linkApply')}</span>
-                </Link>
+                </button>
               </li>
               <li>
                 <Link href="/#gallery" className="text-slate-400 hover:text-amber-400 transition-colors inline-flex items-center gap-2 group">

@@ -44,3 +44,7 @@ next-env.d.ts
 # root images directory (assets stored in public/images)
 /images
 
+# User uploaded files
+/public/uploads/*
+!/public/uploads/.gitkeep
+

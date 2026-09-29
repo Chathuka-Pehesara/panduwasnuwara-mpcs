@@ -27,18 +27,63 @@ export default function BusinessDetailPage() {
   const isSi = locale === 'si';
   const businessKey = Array.isArray(params?.key) ? params.key[0] : params?.key as string;
 
-  // Find base business data
-  const business: BusinessService | undefined = businessesData.find(b => b.key === businessKey);
+  const fallbackBusiness: BusinessService | undefined = businessesData.find(b => b.key === businessKey);
 
-  // If rural-bank is accessed here, we can redirect or render, but user specifically asked for custom bank page at /rural-bank
-  // If not found at all, return 404
-  if (!business) {
-    notFound();
-  }
+  const [business, setBusiness] = useState<BusinessService | null>(fallbackBusiness || null);
+  const [isLoadingBusiness, setIsLoadingBusiness] = useState(!fallbackBusiness);
+  const [isNotFound, setIsNotFound] = useState(false);
 
   const [services, setServices] = useState<BusinessServiceItem[]>([]);
   const [isLoadingServices, setIsLoadingServices] = useState(true);
   const [fuelPrices, setFuelPrices] = useState<FuelPrice[]>([]);
+
+  // Fetch live business data from database
+  useEffect(() => {
+    let isMounted = true;
+    fetch('/api/businesses')
+      .then(res => res.json())
+      .then(data => {
+        if (!isMounted) return;
+        if (data.success && Array.isArray(data.businesses)) {
+          const found = data.businesses.find((b: any) => b.key === businessKey);
+          if (found) {
+            setBusiness({
+              key: found.key,
+              titleSi: found.title_si,
+              titleEn: found.title_en,
+              taglineSi: found.tagline_si || '',
+              taglineEn: found.tagline_en || '',
+              categorySi: found.category_si || '',
+              categoryEn: found.category_en || '',
+              descriptionSi: found.description_si || '',
+              descriptionEn: found.description_en || '',
+              manager: found.manager || '',
+              location: found.location || '',
+              hotline: found.hotline || '',
+              imageSrc: found.image_src || '/logo-photo.jpg',
+              coverImage: found.cover_image || '',
+              isNew: Boolean(found.is_new),
+              services: Array.isArray(found.services) ? found.services : [],
+              servicesEn: Array.isArray(found.services_en) ? found.services_en : []
+            });
+            setIsLoadingBusiness(false);
+            return;
+          }
+        }
+        if (!fallbackBusiness) {
+          setIsNotFound(true);
+        }
+        setIsLoadingBusiness(false);
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        if (!fallbackBusiness) {
+          setIsNotFound(true);
+        }
+        setIsLoadingBusiness(false);
+      });
+    return () => { isMounted = false; };
+  }, [businessKey, fallbackBusiness]);
 
   // Fetch fuel prices if on fuel station page
   useEffect(() => {
@@ -91,15 +136,45 @@ export default function BusinessDetailPage() {
     return () => { isMounted = false; };
   }, [businessKey, business]);
 
-  const cleanHotline = business.hotline.replace(/\s+/g, '');
+  if (isNotFound) {
+    notFound();
+  }
+
+  if (isLoadingBusiness || !business) {
+    return (
+      <div className="w-full min-h-[60vh] flex flex-col items-center justify-center bg-[#f8fafc] text-neutral-600 gap-3">
+        <div className="w-10 h-10 border-3 border-[#003399]/20 border-t-[#003399] rounded-full animate-spin" />
+        <p className="text-xs font-semibold text-neutral-500">
+          {isSi ? 'ව්‍යාපාර තොරතුරු පූරණය වෙමින් පවතී...' : 'Loading business division details...'}
+        </p>
+      </div>
+    );
+  }
+
+  const cleanHotline = (business.hotline || '').replace(/\s+/g, '');
 
   return (
     <div className="w-full bg-[#f8fafc] font-sans min-h-screen">
       
-      {/* 1. HERO SECTION */}
+      {/* 1. HERO SECTION WITH OPTIONAL COVER PHOTO */}
       <section className="relative w-full py-16 sm:py-20 lg:py-24 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white overflow-hidden">
-        {/* Subtle patterned backdrop */}
-        <div className="absolute inset-0 bg-radial from-blue-900/20 via-transparent to-transparent opacity-50 pointer-events-none" />
+        {/* Cover Photo Backdrop if present */}
+        {business.coverImage ? (
+          <div className="absolute inset-0 z-0">
+            <Image
+              src={business.coverImage}
+              alt={business.titleEn}
+              fill
+              className="object-cover object-center scale-105"
+              priority
+            />
+            {/* Rich multi-layer gradient overlays ensuring high contrast text & deep navy brand identity */}
+            <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-900/90 to-blue-950/80 backdrop-blur-[1px]" />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/50 to-transparent" />
+          </div>
+        ) : (
+          <div className="absolute inset-0 bg-radial from-blue-900/20 via-transparent to-transparent opacity-50 pointer-events-none" />
+        )}
         
         <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
           

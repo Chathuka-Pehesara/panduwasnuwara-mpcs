@@ -1,6 +1,5 @@
-import { query } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 import { Inquiry } from '@/lib/types';
-import { initDatabaseSchema } from '@/lib/db/schema';
 
 export interface CreateInquiryInput {
   business_key: string;
@@ -14,62 +13,64 @@ export interface CreateInquiryInput {
 }
 
 export async function createInquiry(data: CreateInquiryInput): Promise<Inquiry> {
-  await initDatabaseSchema();
-  const rows = await query<Inquiry>(
-    `INSERT INTO inquiries (
-      business_key,
-      business_name,
-      user_id,
-      user_name,
-      phone,
-      email,
-      subject,
-      message,
-      status
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'unread')
-    RETURNING *;`,
-    [
-      data.business_key,
-      data.business_name,
-      data.user_id || null,
-      data.user_name,
-      data.phone,
-      data.email || null,
-      data.subject,
-      data.message
-    ]
-  );
-  return rows[0];
+  const { data: inserted, error } = await supabase
+    .from('inquiries')
+    .insert({
+      business_key: data.business_key,
+      business_name: data.business_name,
+      user_id: data.user_id || null,
+      user_name: data.user_name,
+      phone: data.phone,
+      email: data.email || null,
+      subject: data.subject,
+      message: data.message,
+      status: 'unread'
+    })
+    .select()
+    .single();
+
+  if (error || !inserted) {
+    throw new Error(error?.message || 'Failed to submit inquiry');
+  }
+
+  return inserted;
 }
 
 export async function getInquiries(businessKey?: string, status?: string): Promise<Inquiry[]> {
-  await initDatabaseSchema();
-  const conditions: string[] = [];
-  const params: unknown[] = [];
+  let queryBuilder = supabase
+    .from('inquiries')
+    .select('*')
+    .order('created_at', { ascending: false });
 
   if (businessKey && businessKey !== 'all') {
-    params.push(businessKey);
-    conditions.push(`business_key = $${params.length}`);
+    queryBuilder = queryBuilder.eq('business_key', businessKey);
   }
 
   if (status && status !== 'all') {
-    params.push(status);
-    conditions.push(`status = $${params.length}`);
+    queryBuilder = queryBuilder.eq('status', status);
   }
 
-  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-  const sql = `SELECT * FROM inquiries ${whereClause} ORDER BY created_at DESC;`;
+  const { data, error } = await queryBuilder;
+  if (error) {
+    console.error('Error fetching inquiries from Supabase:', error);
+    return [];
+  }
 
-  return query<Inquiry>(sql, params);
+  return data || [];
 }
 
 export async function getInquiryById(id: number): Promise<Inquiry | null> {
-  await initDatabaseSchema();
-  const rows = await query<Inquiry>(
-    `SELECT * FROM inquiries WHERE id = $1;`,
-    [id]
-  );
-  return rows.length > 0 ? rows[0] : null;
+  const { data, error } = await supabase
+    .from('inquiries')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return data;
 }
 
 export interface UpdateInquiryInput {
@@ -83,7 +84,6 @@ export async function updateInquiry(
   id: number,
   input: UpdateInquiryInput
 ): Promise<Inquiry | null> {
-  await initDatabaseSchema();
   const current = await getInquiryById(id);
   if (!current) return null;
 
@@ -96,18 +96,27 @@ export async function updateInquiry(
     newRepliedAt = new Date().toISOString();
   }
 
-  const rows = await query<Inquiry>(
-    `UPDATE inquiries
-     SET status = $2,
-         admin_notes = $3,
-         reply_message = $4,
-         replied_at = $5,
-         updated_at = NOW()
-     WHERE id = $1
-     RETURNING *;`,
-    [id, newStatus, newNotes, newReply, newRepliedAt]
-  );
-  return rows.length > 0 ? rows[0] : null;
+  const updatePayload: any = {
+    status: newStatus,
+    admin_notes: newNotes,
+    reply_message: newReply,
+    replied_at: newRepliedAt,
+    updated_at: new Date().toISOString()
+  };
+
+  const { data: updated, error } = await supabase
+    .from('inquiries')
+    .update(updatePayload)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error || !updated) {
+    console.error('Error updating inquiry in Supabase:', error);
+    return null;
+  }
+
+  return updated;
 }
 
 export async function updateInquiryStatus(
@@ -122,27 +131,38 @@ export async function updateInquiryStatus(
 }
 
 export async function deleteInquiry(id: number): Promise<boolean> {
-  await initDatabaseSchema();
-  const rows = await query(
-    `DELETE FROM inquiries WHERE id = $1 RETURNING id;`,
-    [id]
-  );
-  return rows.length > 0;
+  const { error } = await supabase
+    .from('inquiries')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('Error deleting inquiry from Supabase:', error);
+    return false;
+  }
+
+  return true;
 }
 
 export async function getInquiryCategoryCounts(): Promise<{ business_key: string; count: number; unread_count: number }[]> {
-  await initDatabaseSchema();
-  const rows = await query<{ business_key: string; count: string; unread_count: string }>(
-    `SELECT 
-       business_key, 
-       COUNT(*) as count,
-       COUNT(CASE WHEN status = 'unread' THEN 1 END) as unread_count
-     FROM inquiries 
-     GROUP BY business_key;`
-  );
-  return rows.map(r => ({
-    business_key: r.business_key,
-    count: parseInt(r.count, 10) || 0,
-    unread_count: parseInt(r.unread_count, 10) || 0
+  const { data, error } = await supabase
+    .from('inquiries')
+    .select('business_key, status');
+
+  if (error || !data) return [];
+
+  const map = new Map<string, { count: number; unread_count: number }>();
+  for (const item of data) {
+    const key = item.business_key || 'general';
+    const curr = map.get(key) || { count: 0, unread_count: 0 };
+    curr.count++;
+    if (item.status === 'unread') curr.unread_count++;
+    map.set(key, curr);
+  }
+
+  return Array.from(map.entries()).map(([business_key, val]) => ({
+    business_key,
+    count: val.count,
+    unread_count: val.unread_count
   }));
 }

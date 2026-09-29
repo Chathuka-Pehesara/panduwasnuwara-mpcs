@@ -1,4 +1,4 @@
-import { query } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 
 export const INITIAL_NEWS = [
   {
@@ -90,37 +90,26 @@ For drop-off schedules and depot locations, please visit your nearest MPCS branc
 ];
 
 export async function seedNews(): Promise<void> {
-  // Check if any news already exists
-  const existing = await query<{ count: string }>(`SELECT COUNT(*) as count FROM news_announcements;`);
-  if (parseInt(existing[0]?.count || '0', 10) > 0) {
+  const { count, error } = await supabase
+    .from('news_announcements')
+    .select('*', { count: 'exact', head: true });
+
+  if (error || (count !== null && count > 0)) {
     return;
   }
 
-  for (const n of INITIAL_NEWS) {
-    await query(`
-      INSERT INTO news_announcements (
-        title_si,
-        title_en,
-        description_si,
-        description_en,
-        image_url,
-        category,
-        badge_text_si,
-        badge_text_en,
-        is_pinned,
-        is_published
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
-    `, [
-      n.titleSi,
-      n.titleEn,
-      n.descriptionSi,
-      n.descriptionEn,
-      n.imageUrl,
-      n.category,
-      n.badgeTextSi,
-      n.badgeTextEn,
-      n.isPinned,
-      n.isPublished
-    ]);
-  }
+  const rows = INITIAL_NEWS.map(n => ({
+    title_si: n.titleSi,
+    title_en: n.titleEn,
+    description_si: n.descriptionSi,
+    description_en: n.descriptionEn,
+    image_url: n.imageUrl,
+    category: n.category,
+    badge_text_si: n.badgeTextSi,
+    badge_text_en: n.badgeTextEn,
+    is_pinned: n.isPinned,
+    is_published: n.isPublished
+  }));
+
+  await supabase.from('news_announcements').insert(rows);
 }
