@@ -94,9 +94,6 @@ export async function getAuthContext(req: NextRequest): Promise<AuthContext | nu
   return null;
 }
 
-/**
- * Quick admin verification helper.
- */
 export async function requireAdmin(req: NextRequest): Promise<{ auth: AuthContext | null; errorResponse?: Response }> {
   const auth = await getAuthContext(req);
   if (!auth || !auth.isAdmin) {
