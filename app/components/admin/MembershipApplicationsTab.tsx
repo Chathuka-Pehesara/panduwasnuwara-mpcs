@@ -30,6 +30,63 @@ import {
 } from 'lucide-react';
 import { MembershipApplication } from '@/lib/types';
 
+function CertifiedDocThumbnail({
+  src,
+  onClick
+}: {
+  src: string;
+  onClick: () => void;
+}) {
+  const [hasError, setHasError] = useState(false);
+  const isPdf = src.toLowerCase().endsWith('.pdf') || src.startsWith('data:application/pdf');
+
+  if (isPdf) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className="w-12 h-12 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 flex flex-col items-center justify-center text-rose-600 transition-all cursor-pointer shadow-2xs group"
+        title="View PDF Certified Form"
+      >
+        <FileText className="w-5 h-5 group-hover:scale-110 transition-transform" />
+        <span className="text-[9px] font-bold tracking-wider">PDF</span>
+      </button>
+    );
+  }
+
+  if (hasError) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className="w-12 h-12 rounded-xl border border-neutral-200 bg-neutral-100 hover:bg-neutral-200 flex flex-col items-center justify-center text-neutral-500 transition-all cursor-pointer shadow-2xs group"
+        title="Click to view certified document"
+      >
+        <FileCheck className="w-5 h-5 text-[#003399] group-hover:scale-110 transition-transform" />
+        <span className="text-[8px] font-bold text-neutral-600 uppercase">Doc</span>
+      </button>
+    );
+  }
+
+  return (
+    <div
+      onClick={onClick}
+      className="relative w-12 h-12 rounded-xl overflow-hidden border border-neutral-200 bg-neutral-100 hover:border-[#003399] transition-all cursor-pointer group shadow-2xs"
+      title="Click to review certified rubber-stamped document"
+    >
+      <img
+        src={src}
+        alt="Certified Form"
+        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+        onError={() => setHasError(true)}
+      />
+      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
+        <Eye className="w-4 h-4" />
+      </div>
+    </div>
+  );
+}
+
 interface MembershipApplicationsTabProps {
   onCountChange?: (total: number, pending: number) => void;
 }
@@ -443,21 +500,10 @@ export default function MembershipApplicationsTab({ onCountChange }: MembershipA
                     {/* Certified Document Thumbnail */}
                     <td className="py-3.5 px-4 whitespace-nowrap">
                       {app.certified_form_photo ? (
-                        <div
+                        <CertifiedDocThumbnail
+                          src={app.certified_form_photo}
                           onClick={() => setViewingApp(app)}
-                          className="relative w-12 h-12 rounded-xl overflow-hidden border border-neutral-200 bg-neutral-100 hover:border-[#003399] transition-all cursor-pointer group shadow-2xs"
-                          title="Click to review certified rubber-stamped document"
-                        >
-                          <Image
-                            src={app.certified_form_photo}
-                            alt="Certified Form"
-                            fill
-                            className="object-cover group-hover:scale-105 transition-transform"
-                          />
-                          <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
-                            <Eye className="w-4 h-4" />
-                          </div>
-                        </div>
+                        />
                       ) : (
                         <span className="text-xs text-neutral-400 italic">No document</span>
                       )}
@@ -651,14 +697,45 @@ export default function MembershipApplicationsTab({ onCountChange }: MembershipA
                 </div>
 
                 {viewingApp.certified_form_photo ? (
-                  <div className="relative w-full h-80 sm:h-96 rounded-2xl overflow-hidden border border-neutral-200 bg-neutral-900 shadow-inner">
-                    <Image
-                      src={viewingApp.certified_form_photo}
-                      alt="Certified Application Form"
-                      fill
-                      className="object-contain"
-                    />
-                  </div>
+                  (() => {
+                    const isPdf = viewingApp.certified_form_photo.toLowerCase().endsWith('.pdf') ||
+                      viewingApp.certified_form_photo.startsWith('data:application/pdf');
+
+                    if (isPdf) {
+                      return (
+                        <div className="w-full h-80 sm:h-96 rounded-2xl overflow-hidden border border-neutral-200 bg-slate-50 flex flex-col items-center justify-center p-6 text-center space-y-3">
+                          <div className="w-16 h-16 rounded-2xl bg-rose-100 border border-rose-200 flex items-center justify-center text-rose-600 shadow-xs">
+                            <FileText className="w-8 h-8" />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-sm text-neutral-900">PDF Application Document</h4>
+                            <p className="text-xs text-neutral-500 mt-1 max-w-sm">
+                              This applicant submitted a PDF document. You can open and review the certified document in a new tab.
+                            </p>
+                          </div>
+                          <a
+                            href={viewingApp.certified_form_photo}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#003399] text-white text-xs font-bold hover:bg-[#002266] transition-colors shadow-xs"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                            <span>Open PDF Document</span>
+                          </a>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="relative w-full min-h-[320px] max-h-[520px] rounded-2xl overflow-hidden border border-neutral-200 bg-neutral-900 shadow-inner flex items-center justify-center p-2">
+                        <img
+                          src={viewingApp.certified_form_photo}
+                          alt="Certified Application Form"
+                          className="max-h-[500px] w-auto max-w-full object-contain rounded-lg"
+                        />
+                      </div>
+                    );
+                  })()
                 ) : (
                   <div className="p-8 text-center bg-slate-50 border border-neutral-200 rounded-2xl text-neutral-400">
                     No document photo uploaded
