@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
 import fs from 'fs/promises';
+import { supabase } from '@/lib/supabase';
 import {
   getGalleryPosts,
   togglePostLike,
@@ -76,13 +77,43 @@ export async function POST(req: NextRequest) {
         }
 
         const safeFilename = `gallery-${Date.now()}-${Math.random().toString(36).substring(2, 8)}${ext}`;
-        const uploadDir = path.join(process.cwd(), 'public', 'images', 'gallery');
+        const storagePath = `gallery/${safeFilename}`;
 
-        await fs.mkdir(uploadDir, { recursive: true });
-        const filePath = path.join(uploadDir, safeFilename);
-        await fs.writeFile(filePath, buffer);
+        // 1. Try Supabase Storage
+        try {
+          const mimeType = file.type || 'image/jpeg';
+          const { data: uploadData, error: uploadErr } = await supabase.storage
+            .from('uploads')
+            .upload(storagePath, buffer, {
+              contentType: mimeType,
+              upsert: true
+            });
 
-        imageSrc = `/images/gallery/${safeFilename}`;
+          if (!uploadErr && uploadData) {
+            const { data: pubData } = supabase.storage
+              .from('uploads')
+              .getPublicUrl(storagePath);
+            if (pubData?.publicUrl) {
+              imageSrc = pubData.publicUrl;
+            }
+          }
+        } catch (storageErr) {
+          console.warn('Supabase gallery storage error:', storageErr);
+        }
+
+        // 2. Fallback to local or data URL
+        if (!imageSrc) {
+          try {
+            const uploadDir = path.join(process.cwd(), 'public', 'images', 'gallery');
+            await fs.mkdir(uploadDir, { recursive: true });
+            const filePath = path.join(uploadDir, safeFilename);
+            await fs.writeFile(filePath, buffer);
+            imageSrc = `/images/gallery/${safeFilename}`;
+          } catch (fsErr) {
+            const mimeType = file.type || 'image/jpeg';
+            imageSrc = `data:${mimeType};base64,${buffer.toString('base64')}`;
+          }
+        }
       }
 
       if (!imageSrc) {
@@ -206,13 +237,43 @@ export async function PUT(req: NextRequest) {
         }
 
         const safeFilename = `gallery-${Date.now()}-${Math.random().toString(36).substring(2, 8)}${ext}`;
-        const uploadDir = path.join(process.cwd(), 'public', 'images', 'gallery');
+        const storagePath = `gallery/${safeFilename}`;
 
-        await fs.mkdir(uploadDir, { recursive: true });
-        const filePath = path.join(uploadDir, safeFilename);
-        await fs.writeFile(filePath, buffer);
+        // 1. Try Supabase Storage
+        try {
+          const mimeType = file.type || 'image/jpeg';
+          const { data: uploadData, error: uploadErr } = await supabase.storage
+            .from('uploads')
+            .upload(storagePath, buffer, {
+              contentType: mimeType,
+              upsert: true
+            });
 
-        imageSrc = `/images/gallery/${safeFilename}`;
+          if (!uploadErr && uploadData) {
+            const { data: pubData } = supabase.storage
+              .from('uploads')
+              .getPublicUrl(storagePath);
+            if (pubData?.publicUrl) {
+              imageSrc = pubData.publicUrl;
+            }
+          }
+        } catch (storageErr) {
+          console.warn('Supabase gallery storage error:', storageErr);
+        }
+
+        // 2. Fallback to local or data URL
+        if (!imageSrc) {
+          try {
+            const uploadDir = path.join(process.cwd(), 'public', 'images', 'gallery');
+            await fs.mkdir(uploadDir, { recursive: true });
+            const filePath = path.join(uploadDir, safeFilename);
+            await fs.writeFile(filePath, buffer);
+            imageSrc = `/images/gallery/${safeFilename}`;
+          } catch (fsErr) {
+            const mimeType = file.type || 'image/jpeg';
+            imageSrc = `data:${mimeType};base64,${buffer.toString('base64')}`;
+          }
+        }
       }
     } else {
       const body = await req.json();

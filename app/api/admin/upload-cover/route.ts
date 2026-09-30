@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
 import fs from 'fs/promises';
+import { supabase } from '@/lib/supabase';
 
 function isAdmin(req: NextRequest): boolean {
   const token = req.cookies.get('mpcs_admin_token')?.value || req.cookies.get('mpcs_auth_token')?.value;
@@ -42,16 +43,47 @@ export async function POST(req: NextRequest) {
       .substring(0, 30);
 
     const safeFilename = `${rawBase || 'cover'}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}${ext}`;
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'covers');
+    const storagePath = `covers/${safeFilename}`;
 
-    await fs.mkdir(uploadDir, { recursive: true });
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    const targetPath = path.join(uploadDir, safeFilename);
+    let publicUrl = '';
 
-    await fs.writeFile(targetPath, buffer);
+    // 1. Try Supabase Storage
+    try {
+      const mimeType = file.type || 'image/jpeg';
+      const { data: uploadData, error: uploadErr } = await supabase.storage
+        .from('uploads')
+        .upload(storagePath, buffer, {
+          contentType: mimeType,
+          upsert: true
+        });
 
-    const publicUrl = `/uploads/covers/${safeFilename}`;
+      if (!uploadErr && uploadData) {
+        const { data: pubData } = supabase.storage
+          .from('uploads')
+          .getPublicUrl(storagePath);
+        if (pubData?.publicUrl) {
+          publicUrl = pubData.publicUrl;
+        }
+      }
+    } catch (storageErr) {
+      console.warn('Supabase storage cover upload error:', storageErr);
+    }
+
+    // 2. Fallback to local or data URL
+    if (!publicUrl) {
+      try {
+        const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'covers');
+        await fs.mkdir(uploadDir, { recursive: true });
+        const targetPath = path.join(uploadDir, safeFilename);
+        await fs.writeFile(targetPath, buffer);
+        publicUrl = `/uploads/covers/${safeFilename}`;
+      } catch (fsErr) {
+        const mimeType = file.type || 'image/jpeg';
+        publicUrl = `data:${mimeType};base64,${buffer.toString('base64')}`;
+      }
+    }
 
     return NextResponse.json({
       success: true,
