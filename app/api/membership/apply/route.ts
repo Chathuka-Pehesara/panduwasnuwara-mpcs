@@ -4,6 +4,7 @@ import fs from 'fs/promises';
 import { createMembershipApplication } from '@/lib/models/membershipApplication';
 import { findUserByNicOrUsername } from '@/lib/models/user';
 import { initDatabaseSchema } from '@/lib/db/schema';
+import { supabase } from '@/lib/supabase';
 
 function getAuthFromToken(token?: string) {
   if (!token) return null;
@@ -75,13 +76,43 @@ export async function POST(req: NextRequest) {
     }
 
     const safeFilename = `app-${Date.now()}-${Math.random().toString(36).substring(2, 8)}${ext}`;
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'membership-applications');
+    let certifiedFormPhotoUrl = '';
 
-    await fs.mkdir(uploadDir, { recursive: true });
-    const filePath = path.join(uploadDir, safeFilename);
-    await fs.writeFile(filePath, buffer);
+    // 1. Prioritize cloud storage via Supabase Storage
+    try {
+      const mimeType = photoFile.type || (ext === '.pdf' ? 'application/pdf' : 'image/jpeg');
+      const { data: uploadData, error: uploadErr } = await supabase.storage
+        .from('membership-applications')
+        .upload(safeFilename, buffer, {
+          contentType: mimeType,
+          upsert: true
+        });
 
-    const certifiedFormPhotoUrl = `/uploads/membership-applications/${safeFilename}`;
+      if (!uploadErr && uploadData) {
+        const { data: pubData } = supabase.storage
+          .from('membership-applications')
+          .getPublicUrl(safeFilename);
+        if (pubData?.publicUrl) {
+          certifiedFormPhotoUrl = pubData.publicUrl;
+        }
+      }
+    } catch (storageErr) {
+      console.warn('Supabase storage upload error, attempting local/inline fallback:', storageErr);
+    }
+
+    // 2. Fallback to local filesystem or data URL if filesystem is read-only
+    if (!certifiedFormPhotoUrl) {
+      try {
+        const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'membership-applications');
+        await fs.mkdir(uploadDir, { recursive: true });
+        const filePath = path.join(uploadDir, safeFilename);
+        await fs.writeFile(filePath, buffer);
+        certifiedFormPhotoUrl = `/uploads/membership-applications/${safeFilename}`;
+      } catch (fsErr) {
+        const mimeType = photoFile.type || 'image/jpeg';
+        certifiedFormPhotoUrl = `data:${mimeType};base64,${buffer.toString('base64')}`;
+      }
+    }
 
     // Check if user is logged in
     const token = req.cookies.get('mpcs_auth_token')?.value || req.cookies.get('mpcs_admin_token')?.value;

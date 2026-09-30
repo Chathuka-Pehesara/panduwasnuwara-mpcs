@@ -9,6 +9,7 @@ import {
   getNewsById
 } from '@/lib/models/news';
 import { initDatabaseSchema } from '@/lib/db/schema';
+import { supabase } from '@/lib/supabase';
 
 function isAdmin(req: NextRequest): boolean {
   const token = req.cookies.get('mpcs_admin_token')?.value || req.cookies.get('mpcs_auth_token')?.value;
@@ -87,13 +88,43 @@ export async function POST(req: NextRequest) {
         }
 
         const safeFilename = `news-${Date.now()}-${Math.random().toString(36).substring(2, 8)}${ext}`;
-        const uploadDir = path.join(process.cwd(), 'public', 'images', 'news');
+        const storagePath = `news/${safeFilename}`;
         
-        await fs.mkdir(uploadDir, { recursive: true });
-        const filePath = path.join(uploadDir, safeFilename);
-        await fs.writeFile(filePath, buffer);
+        // 1. Try Supabase Storage
+        try {
+          const mimeType = file.type || 'image/jpeg';
+          const { data: uploadData, error: uploadErr } = await supabase.storage
+            .from('uploads')
+            .upload(storagePath, buffer, {
+              contentType: mimeType,
+              upsert: true
+            });
 
-        imageUrl = `/images/news/${safeFilename}`;
+          if (!uploadErr && uploadData) {
+            const { data: pubData } = supabase.storage
+              .from('uploads')
+              .getPublicUrl(storagePath);
+            if (pubData?.publicUrl) {
+              imageUrl = pubData.publicUrl;
+            }
+          }
+        } catch (storageErr) {
+          console.warn('Supabase news storage error:', storageErr);
+        }
+
+        // 2. Fallback to local or data URL
+        if (!imageUrl) {
+          try {
+            const uploadDir = path.join(process.cwd(), 'public', 'images', 'news');
+            await fs.mkdir(uploadDir, { recursive: true });
+            const filePath = path.join(uploadDir, safeFilename);
+            await fs.writeFile(filePath, buffer);
+            imageUrl = `/images/news/${safeFilename}`;
+          } catch (fsErr) {
+            const mimeType = file.type || 'image/jpeg';
+            imageUrl = `data:${mimeType};base64,${buffer.toString('base64')}`;
+          }
+        }
       }
     } else {
       const body = await req.json();
@@ -200,13 +231,43 @@ export async function PUT(req: NextRequest) {
         }
 
         const safeFilename = `news-${Date.now()}-${Math.random().toString(36).substring(2, 8)}${ext}`;
-        const uploadDir = path.join(process.cwd(), 'public', 'images', 'news');
+        const storagePath = `news/${safeFilename}`;
         
-        await fs.mkdir(uploadDir, { recursive: true });
-        const filePath = path.join(uploadDir, safeFilename);
-        await fs.writeFile(filePath, buffer);
+        // 1. Try Supabase Storage
+        try {
+          const mimeType = file.type || 'image/jpeg';
+          const { data: uploadData, error: uploadErr } = await supabase.storage
+            .from('uploads')
+            .upload(storagePath, buffer, {
+              contentType: mimeType,
+              upsert: true
+            });
 
-        imageUrl = `/images/news/${safeFilename}`;
+          if (!uploadErr && uploadData) {
+            const { data: pubData } = supabase.storage
+              .from('uploads')
+              .getPublicUrl(storagePath);
+            if (pubData?.publicUrl) {
+              imageUrl = pubData.publicUrl;
+            }
+          }
+        } catch (storageErr) {
+          console.warn('Supabase news storage error:', storageErr);
+        }
+
+        // 2. Fallback to local or data URL
+        if (!imageUrl) {
+          try {
+            const uploadDir = path.join(process.cwd(), 'public', 'images', 'news');
+            await fs.mkdir(uploadDir, { recursive: true });
+            const filePath = path.join(uploadDir, safeFilename);
+            await fs.writeFile(filePath, buffer);
+            imageUrl = `/images/news/${safeFilename}`;
+          } catch (fsErr) {
+            const mimeType = file.type || 'image/jpeg';
+            imageUrl = `data:${mimeType};base64,${buffer.toString('base64')}`;
+          }
+        }
       }
     } else {
       const body = await req.json();
