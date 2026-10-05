@@ -53,10 +53,9 @@ export default function LanguageSwitcherBubble() {
           isClicked ? 'scale-95' : 'hover:scale-[1.02]'
         }`}
       >
-        {/* Subtle Government Emblem / Globe Icon with pulse ring */}
-        <div className="relative flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-br from-[#003399] to-[#002266] text-white shadow-md shrink-0">
-          <Globe className={`w-4 h-4 transition-transform duration-500 ${isHovered ? 'rotate-45' : ''}`} />
-          <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white ring-1 ring-emerald-300" />
+        {/* Government Cooperative Globe Icon */}
+        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#003399] text-white shrink-0 shadow-xs">
+          <Globe className={`w-4 h-4 transition-transform duration-300 ${isHovered ? 'rotate-12' : ''}`} />
         </div>
 
         {/* Compact Default Pill Content */}

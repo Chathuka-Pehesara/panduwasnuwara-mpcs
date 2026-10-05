@@ -1314,15 +1314,14 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
               }}
               className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 activeTab === 'dashboard'
-                  ? 'bg-neutral-900 text-white shadow-xs'
-                  : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+                  ? 'bg-[#003399] text-white shadow-xs'
+                  : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <LayoutDashboard className="w-4 h-4 text-[#003399]" />
+                <LayoutDashboard className={`w-4 h-4 ${activeTab === 'dashboard' ? 'text-white' : 'text-[#003399]'}`} />
                 <span>{locale === 'si' ? 'දළ විශ්ලේෂණය' : 'Dashboard'}</span>
               </div>
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             </button>
 
             <button
@@ -1332,17 +1331,17 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
               }}
               className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 activeTab === 'users'
-                  ? 'bg-neutral-900 text-white shadow-xs'
-                  : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+                  ? 'bg-[#003399] text-white shadow-xs'
+                  : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <Users className="w-4 h-4" />
+                <Users className={`w-4 h-4 ${activeTab === 'users' ? 'text-white' : 'text-[#003399]'}`} />
                 <span>{t('usersTab')}</span>
               </div>
               <span
                 className={`text-[11px] font-mono px-1.5 py-0.5 rounded ${
-                  activeTab === 'users' ? 'bg-neutral-800 text-neutral-200' : 'bg-neutral-100 text-neutral-500'
+                  activeTab === 'users' ? 'bg-[#002266] text-white' : 'bg-neutral-100 text-neutral-600'
                 }`}
               >
                 {users.length}
@@ -1358,15 +1357,17 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
                 }}
                 className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                   activeTab === 'admins'
-                    ? 'bg-neutral-900 text-white shadow-xs'
-                    : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+                    ? 'bg-[#003399] text-white shadow-xs'
+                    : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900'
                 }`}
               >
                 <div className="flex items-center gap-2.5">
-                  <ShieldCheck className="w-4 h-4 text-purple-600" />
+                  <ShieldCheck className={`w-4 h-4 ${activeTab === 'admins' ? 'text-white' : 'text-[#003399]'}`} />
                   <span>{locale === 'si' ? 'පරිපාලකවරුන් කළමනාකරණය' : 'Administrators'}</span>
                 </div>
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700">
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
+                  activeTab === 'admins' ? 'bg-[#002266] text-white border-blue-400/40' : 'bg-slate-100 text-[#003399] border-slate-200'
+                }`}>
                   SUPER
                 </span>
               </button>
@@ -1380,21 +1381,25 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
               }}
               className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 activeTab === 'applications'
-                  ? 'bg-neutral-900 text-white shadow-xs'
-                  : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+                  ? 'bg-[#003399] text-white shadow-xs'
+                  : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <FileCheck className="w-4 h-4 text-[#003399]" />
+                <FileCheck className={`w-4 h-4 ${activeTab === 'applications' ? 'text-white' : 'text-[#003399]'}`} />
                 <span>{locale === 'si' ? 'සාමාජික අයදුම්පත්' : 'Membership Applications'}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 {appsPendingCount > 0 && (
-                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                  <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
+                    activeTab === 'applications' ? 'bg-amber-400 text-slate-950 font-bold' : 'bg-amber-100 text-amber-900 border border-amber-200'
+                  }`}>
+                    {appsPendingCount}
+                  </span>
                 )}
                 <span
                   className={`text-[11px] font-mono px-1.5 py-0.5 rounded ${
-                    activeTab === 'applications' ? 'bg-neutral-800 text-neutral-200' : 'bg-neutral-100 text-neutral-500'
+                    activeTab === 'applications' ? 'bg-[#002266] text-white' : 'bg-neutral-100 text-neutral-600'
                   }`}
                 >
                   {appsTotalCount}
@@ -1409,12 +1414,12 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
               }}
               className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 activeTab === 'metrics'
-                  ? 'bg-neutral-900 text-white shadow-xs'
-                  : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+                  ? 'bg-[#003399] text-white shadow-xs'
+                  : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <BarChart3 className="w-4 h-4" />
+                <BarChart3 className={`w-4 h-4 ${activeTab === 'metrics' ? 'text-white' : 'text-[#003399]'}`} />
                 <span>{t('metricsTab')}</span>
               </div>
             </button>
@@ -1427,18 +1432,18 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
               }}
               className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 activeTab === 'board'
-                  ? 'bg-neutral-900 text-white shadow-xs'
-                  : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+                  ? 'bg-[#003399] text-white shadow-xs'
+                  : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                <ShieldCheck className={`w-4 h-4 ${activeTab === 'board' ? 'text-white' : 'text-[#003399]'}`} />
                 <span>{locale === 'si' ? 'අධ්‍යක්ෂ මණ්ඩලය' : 'Board of Directors'}</span>
               </div>
               {boardCount > 0 && (
                 <span
                   className={`text-[11px] font-mono px-1.5 py-0.5 rounded ${
-                    activeTab === 'board' ? 'bg-neutral-800 text-neutral-200' : 'bg-neutral-100 text-neutral-500'
+                    activeTab === 'board' ? 'bg-[#002266] text-white' : 'bg-neutral-100 text-neutral-600'
                   }`}
                 >
                   {boardCount}
@@ -1453,17 +1458,17 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
               }}
               className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 activeTab === 'news'
-                  ? 'bg-neutral-900 text-white shadow-xs'
-                  : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+                  ? 'bg-[#003399] text-white shadow-xs'
+                  : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <Newspaper className="w-4 h-4" />
+                <Newspaper className={`w-4 h-4 ${activeTab === 'news' ? 'text-white' : 'text-[#003399]'}`} />
                 <span>{t('newsTab')}</span>
               </div>
               <span
                 className={`text-[11px] font-mono px-1.5 py-0.5 rounded ${
-                  activeTab === 'news' ? 'bg-neutral-800 text-neutral-200' : 'bg-neutral-100 text-neutral-500'
+                  activeTab === 'news' ? 'bg-[#002266] text-white' : 'bg-neutral-100 text-neutral-600'
                 }`}
               >
                 {newsList.length}
@@ -1477,17 +1482,17 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
               }}
               className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 activeTab === 'gallery'
-                  ? 'bg-neutral-900 text-white shadow-xs'
-                  : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+                  ? 'bg-[#003399] text-white shadow-xs'
+                  : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <ImageIcon className="w-4 h-4" />
+                <ImageIcon className={`w-4 h-4 ${activeTab === 'gallery' ? 'text-white' : 'text-[#003399]'}`} />
                 <span>{t('galleryTab')}</span>
               </div>
               <span
                 className={`text-[11px] font-mono px-1.5 py-0.5 rounded ${
-                  activeTab === 'gallery' ? 'bg-neutral-800 text-neutral-200' : 'bg-neutral-100 text-neutral-500'
+                  activeTab === 'gallery' ? 'bg-[#002266] text-white' : 'bg-neutral-100 text-neutral-600'
                 }`}
               >
                 {galleryPosts.length}
@@ -1501,21 +1506,25 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
               }}
               className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 activeTab === 'messages'
-                  ? 'bg-neutral-900 text-white shadow-xs'
-                  : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+                  ? 'bg-[#003399] text-white shadow-xs'
+                  : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <MessageCircle className="w-4 h-4" />
+                <MessageCircle className={`w-4 h-4 ${activeTab === 'messages' ? 'text-white' : 'text-[#003399]'}`} />
                 <span>{t('messagesTab') || 'Messages & Inquiries'}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 {inquiries.filter(i => i.status === 'unread').length > 0 && (
-                  <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                  <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
+                    activeTab === 'messages' ? 'bg-rose-400 text-slate-950' : 'bg-rose-100 text-rose-800 border border-rose-200'
+                  }`}>
+                    {inquiries.filter(i => i.status === 'unread').length}
+                  </span>
                 )}
                 <span
                   className={`text-[11px] font-mono px-1.5 py-0.5 rounded ${
-                    activeTab === 'messages' ? 'bg-neutral-800 text-neutral-200' : 'bg-neutral-100 text-neutral-500'
+                    activeTab === 'messages' ? 'bg-[#002266] text-white' : 'bg-neutral-100 text-neutral-600'
                   }`}
                 >
                   {inquiries.length}
@@ -1530,12 +1539,12 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
               }}
               className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 activeTab === 'services'
-                  ? 'bg-neutral-900 text-white shadow-xs'
-                  : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+                  ? 'bg-[#003399] text-white shadow-xs'
+                  : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900'
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <Briefcase className="w-4 h-4 text-[#003399]" />
+                <Briefcase className={`w-4 h-4 ${activeTab === 'services' ? 'text-white' : 'text-[#003399]'}`} />
                 <span>{locale === 'si' ? 'ව්‍යාපාර සහ සේවාවන්' : 'Businesses & Services'}</span>
               </div>
             </button>
@@ -1547,11 +1556,11 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
               }}
               className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 activeTab === 'fuel'
-                  ? 'bg-neutral-900 text-white shadow-xs'
-                  : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+                  ? 'bg-[#003399] text-white shadow-xs'
+                  : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900'
               }`}
             >
-              <Fuel className="w-4 h-4 text-amber-500" />
+              <Fuel className={`w-4 h-4 ${activeTab === 'fuel' ? 'text-white' : 'text-[#003399]'}`} />
               <span>{locale === 'si' ? 'ඉන්ධන මිල ගණන්' : 'Fuel Prices'}</span>
             </button>
 
@@ -1562,11 +1571,11 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
               }}
               className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 activeTab === 'settings'
-                  ? 'bg-neutral-900 text-white shadow-xs'
-                  : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+                  ? 'bg-[#003399] text-white shadow-xs'
+                  : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900'
               }`}
             >
-              <SettingsIcon className="w-4 h-4" />
+              <SettingsIcon className={`w-4 h-4 ${activeTab === 'settings' ? 'text-white' : 'text-[#003399]'}`} />
               <span>{t('settingsTab')}</span>
             </button>
           </div>
