@@ -68,6 +68,13 @@ export interface Inquiry {
   updated_at: string;
 }
 
+export interface BusinessManager {
+  branch?: string;
+  name: string;
+  location?: string;
+  hotline?: string;
+}
+
 export interface BusinessItem {
   id: number;
   key: string;
@@ -82,6 +89,7 @@ export interface BusinessItem {
   manager?: string | null;
   location?: string | null;
   hotline?: string | null;
+  managers?: BusinessManager[];
   image_src?: string | null;
   cover_image?: string | null;
   is_new?: boolean;

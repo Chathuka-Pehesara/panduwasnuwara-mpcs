@@ -29,6 +29,7 @@ export interface BusinessService {
   manager: string;
   location: string;
   hotline: string;
+  managers?: Array<{ name: string; location?: string; hotline?: string }>;
   imageSrc: string;
   coverImage?: string;
   isNew?: boolean;
@@ -316,6 +317,9 @@ export default function BusinessesSection() {
             manager: b.manager || '',
             location: b.location || '',
             hotline: b.hotline || '',
+            managers: Array.isArray(b.managers)
+              ? b.managers
+              : (b.manager ? [{ name: b.manager, location: b.location || '', hotline: b.hotline || '' }] : []),
             imageSrc: b.image_src || '/logo-photo.jpg',
             coverImage: b.cover_image || '',
             isNew: Boolean(b.is_new),
@@ -546,23 +550,55 @@ export default function BusinessesSection() {
                 </div>
 
                 {/* Key Contact & Location Details */}
-                <div className="pt-2 border-t border-neutral-200/60 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-neutral-600">
-                  <div className="flex items-center gap-3 p-3.5 rounded-xl bg-slate-50 border border-neutral-200/80">
-                    <UserCheck className="w-4 h-4 text-neutral-700 shrink-0" />
-                    <div className="truncate">
-                      <span className="block text-[10px] text-neutral-400 font-bold uppercase tracking-wider">{t('manager')}</span>
-                      <span className="font-semibold text-neutral-800 truncate block mt-0.5">{selectedBusiness.manager}</span>
+                {selectedBusiness.managers && selectedBusiness.managers.length > 1 ? (
+                  <div className="pt-2 border-t border-neutral-200/60 space-y-2">
+                    <span className="block text-[10px] text-neutral-400 font-bold uppercase tracking-wider">
+                      {isSi ? 'අංශ කළමනාකාරීත්වය සහ ශාඛා' : 'Department Managers & Branches'}
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {selectedBusiness.managers.map((m, mIdx) => (
+                        <div key={mIdx} className="p-3 rounded-xl bg-slate-50 border border-neutral-200/80 space-y-1 text-xs">
+                          <div className="flex items-center gap-2">
+                            <UserCheck className="w-3.5 h-3.5 text-[#003399] shrink-0" />
+                            <span className="font-bold text-neutral-900 truncate">{m.name}</span>
+                          </div>
+                          {m.location && (
+                            <div className="flex items-center gap-2 text-neutral-500 text-[11px] truncate">
+                              <MapPin className="w-3 h-3 text-neutral-400 shrink-0" />
+                              <span className="truncate">{m.location}</span>
+                            </div>
+                          )}
+                          {m.hotline && (
+                            <div className="flex items-center gap-2 text-[11px] font-mono font-semibold text-neutral-700">
+                              <Phone className="w-3 h-3 text-amber-600 shrink-0" />
+                              <a href={`tel:${m.hotline.replace(/\s+/g, '')}`} className="hover:text-[#003399]">
+                                {m.hotline}
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   </div>
+                ) : (
+                  <div className="pt-2 border-t border-neutral-200/60 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-neutral-600">
+                    <div className="flex items-center gap-3 p-3.5 rounded-xl bg-slate-50 border border-neutral-200/80">
+                      <UserCheck className="w-4 h-4 text-neutral-700 shrink-0" />
+                      <div className="truncate">
+                        <span className="block text-[10px] text-neutral-400 font-bold uppercase tracking-wider">{t('manager')}</span>
+                        <span className="font-semibold text-neutral-800 truncate block mt-0.5">{selectedBusiness.manager}</span>
+                      </div>
+                    </div>
 
-                  <div className="flex items-start gap-3 p-3.5 rounded-xl bg-slate-50 border border-neutral-200/80">
-                    <MapPin className="w-4 h-4 text-neutral-700 shrink-0 mt-0.5" />
-                    <div>
-                      <span className="block text-[10px] text-neutral-400 font-bold uppercase tracking-wider">{t('location')}</span>
-                      <span className="font-semibold text-neutral-800 block mt-0.5">{selectedBusiness.location}</span>
+                    <div className="flex items-start gap-3 p-3.5 rounded-xl bg-slate-50 border border-neutral-200/80">
+                      <MapPin className="w-4 h-4 text-neutral-700 shrink-0 mt-0.5" />
+                      <div>
+                        <span className="block text-[10px] text-neutral-400 font-bold uppercase tracking-wider">{t('location')}</span>
+                        <span className="font-semibold text-neutral-800 block mt-0.5">{selectedBusiness.location}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Fixed Bottom Action Bar */}
