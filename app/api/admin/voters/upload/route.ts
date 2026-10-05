@@ -14,45 +14,133 @@ function isAdmin(req: NextRequest): boolean {
 }
 
 /**
- * Robust Electoral Register CSV parser
+ * RFC-4180 compliant CSV line splitter supporting quoted values with commas
+ */
+function splitCsvLine(line: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"' || char === "'") {
+      inQuotes = !inQuotes;
+    } else if ((char === ',' || char === '\t' || char === ';') && !inQuotes) {
+      result.push(current.trim().replace(/^["']|["']$/g, ''));
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  result.push(current.trim().replace(/^["']|["']$/g, ''));
+  return result;
+}
+
+/**
+ * Robust Electoral Register CSV parser supporting exact format:
+ * Member Number, NIC, FULL NAME, ADDRESS, POSTAL ADDRESS, GENDER
  */
 function parseVoterCsv(text: string): VoterRecord[] {
   const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   if (lines.length === 0) return [];
 
-  const firstLine = lines[0].toLowerCase();
-  const hasHeader = firstLine.includes('voter') || firstLine.includes('name') || firstLine.includes('nic') || firstLine.includes('division');
-  const dataLines = hasHeader ? lines.slice(1) : lines;
+  const rawHeaders = splitCsvLine(lines[0]).map(h => h.toLowerCase().replace(/[^a-z0-9]/g, ''));
+  const hasHeader = rawHeaders.some(h => 
+    h.includes('voter') || h.includes('member') || h.includes('name') || h.includes('nic') || h.includes('address') || h.includes('division') || h.includes('gender')
+  );
 
+  let colMap = {
+    voterNumber: 0,
+    nic: 1,
+    fullName: 2,
+    address: 3,
+    postalAddress: 4,
+    gender: 5,
+    division: -1
+  };
+
+  if (hasHeader) {
+    colMap = {
+      voterNumber: rawHeaders.findIndex(h => h.includes('voter') || h.includes('member') || h.includes('no') || h.includes('reg') || h.includes('id')),
+      nic: rawHeaders.findIndex(h => h.includes('nic') || h.includes('identity')),
+      fullName: rawHeaders.findIndex(h => (h.includes('name') && !h.includes('voter') && !h.includes('member')) || h === 'fullname' || h === 'name'),
+      address: rawHeaders.findIndex(h => h === 'address' || (h.includes('address') && !h.includes('postal'))),
+      postalAddress: rawHeaders.findIndex(h => h.includes('postal') || h.includes('postaddress') || h.includes('mailing')),
+      gender: rawHeaders.findIndex(h => h.includes('gender') || h.includes('sex')),
+      division: rawHeaders.findIndex(h => h.includes('division') || h.includes('polling') || h.includes('area') || h.includes('ward'))
+    };
+
+    if (colMap.fullName === -1) {
+      colMap.fullName = rawHeaders.findIndex(h => h.includes('name'));
+    }
+  }
+
+  const dataLines = hasHeader ? lines.slice(1) : lines;
   const records: VoterRecord[] = [];
 
   for (const line of dataLines) {
-    const parts = line.split(/[,;\t]/).map(p => p.trim().replace(/^["']|["']$/g, ''));
+    const parts = splitCsvLine(line);
     if (parts.length === 0 || !parts.some(Boolean)) continue;
 
     let voterNumber = '';
-    let fullName = '';
+    let memberNumber = '';
     let nic = '';
+    let fullName = '';
+    let address = '';
+    let postalAddress = '';
+    let gender = '';
     let division = '';
 
-    if (parts.length === 1) {
-      fullName = parts[0];
-    } else if (parts.length === 2) {
-      fullName = parts[0];
-      nic = parts[1];
-    } else if (parts.length === 3) {
-      voterNumber = parts[0];
-      fullName = parts[1];
-      nic = parts[2];
+    if (hasHeader) {
+      if (colMap.voterNumber !== -1 && parts[colMap.voterNumber]) {
+        voterNumber = parts[colMap.voterNumber];
+        memberNumber = parts[colMap.voterNumber];
+      }
+      if (colMap.nic !== -1 && parts[colMap.nic]) nic = parts[colMap.nic];
+      if (colMap.fullName !== -1 && parts[colMap.fullName]) fullName = parts[colMap.fullName];
+      if (colMap.address !== -1 && parts[colMap.address]) address = parts[colMap.address];
+      if (colMap.postalAddress !== -1 && parts[colMap.postalAddress]) postalAddress = parts[colMap.postalAddress];
+      if (colMap.gender !== -1 && parts[colMap.gender]) gender = parts[colMap.gender];
+      if (colMap.division !== -1 && parts[colMap.division]) division = parts[colMap.division];
     } else {
-      voterNumber = parts[0];
-      fullName = parts[1];
-      nic = parts[2];
-      division = parts[3];
+      // Positional exact format: Member Number, NIC, FULL NAME, ADDRESS, POSTAL ADDRESS, GENDER
+      if (parts.length >= 6) {
+        voterNumber = parts[0];
+        memberNumber = parts[0];
+        nic = parts[1];
+        fullName = parts[2];
+        address = parts[3];
+        postalAddress = parts[4];
+        gender = parts[5];
+        if (parts.length >= 7) division = parts[6];
+      } else if (parts.length === 5) {
+        voterNumber = parts[0];
+        memberNumber = parts[0];
+        nic = parts[1];
+        fullName = parts[2];
+        address = parts[3];
+        postalAddress = parts[4];
+      } else if (parts.length === 4) {
+        voterNumber = parts[0];
+        memberNumber = parts[0];
+        nic = parts[1];
+        fullName = parts[2];
+        address = parts[3];
+      } else if (parts.length === 3) {
+        voterNumber = parts[0];
+        memberNumber = parts[0];
+        nic = parts[1];
+        fullName = parts[2];
+      } else if (parts.length === 2) {
+        fullName = parts[0];
+        nic = parts[1];
+      } else if (parts.length === 1) {
+        fullName = parts[0];
+      }
     }
 
     if (fullName) {
-      records.push({ voterNumber, fullName, nic, division });
+      records.push({ voterNumber, memberNumber, nic, fullName, address, postalAddress, gender, division });
     }
   }
 
