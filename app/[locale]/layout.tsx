@@ -5,6 +5,7 @@ import Footer from "@/app/components/Footer";
 import { MembershipProvider } from "@/app/context/MembershipContext";
 import MembershipModals from "@/app/components/MembershipModals";
 import GuestHeartbeat from "@/app/components/GuestHeartbeat";
+import LanguageSwitcherBubble from "@/app/components/LanguageSwitcherBubble";
 
 export default async function LocaleLayout({
   children,
@@ -22,6 +23,7 @@ export default async function LocaleLayout({
           <main className="flex-grow">{children}</main>
           <Footer />
           <MembershipModals />
+          <LanguageSwitcherBubble />
         </MembershipProvider>
       </NextIntlClientProvider>
     </div>
