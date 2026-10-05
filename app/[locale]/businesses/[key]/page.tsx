@@ -420,11 +420,11 @@ export default function BusinessDetailPage() {
                         <UserCheck className="w-5 h-5 text-[#003399]" />
                       </div>
                       <div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block font-mono">
-                          {isSi ? `කළමනාකරු #${mIdx + 1}` : `Manager #${mIdx + 1}`}
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#003399] block font-mono">
+                          {mgr.branch ? mgr.branch : (isSi ? `කළමනාකරු #${mIdx + 1}` : `Manager #${mIdx + 1}`)}
                         </span>
                         <h4 className="font-condensed text-sm sm:text-base font-bold text-neutral-900 mt-0.5">
-                          {mgr.name}
+                          {mgr.name || (isSi ? 'පත් කිරීමට නියමිතයි' : 'To be appointed')}
                         </h4>
                         {mgr.location && (
                           <p className="text-xs text-neutral-600 mt-1.5 flex items-start gap-1.5">

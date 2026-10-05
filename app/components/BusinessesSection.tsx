@@ -29,7 +29,7 @@ export interface BusinessService {
   manager: string;
   location: string;
   hotline: string;
-  managers?: Array<{ name: string; location?: string; hotline?: string }>;
+  managers?: Array<{ branch?: string; name: string; location?: string; hotline?: string }>;
   imageSrc: string;
   coverImage?: string;
   isNew?: boolean;
@@ -89,10 +89,24 @@ export const businessesData: BusinessService[] = [
       'Home Delivery Service',
       'Fair-priced Essential Goods'
     ],
-    manager: 'එස් එම් රණසිංහ (Manager)',
+    manager: 'එස් එම් රණසිංහ (Sales Development Manager)',
     location: 'පාරිභෝගික අංශය, සමිති ගොඩනැගිල්ල, හැට්ටිපොල',
     hotline: '037 229 1013',
     imageSrc: '/images/sections/consumer.png',
+    managers: [
+      {
+        branch: 'Sales Development Manager',
+        name: 'එස් එම් රණසිංහ',
+        location: 'පාරිභෝගික අංශය, සමිති ගොඩනැගිල්ල, හැට්ටිපොල',
+        hotline: '037 229 1013'
+      },
+      {
+        branch: 'Store Manager',
+        name: '',
+        location: 'පාරිභෝගික අංශය, සමිති ගොඩනැගිල්ල, හැට්ටිපොල',
+        hotline: '037 229 1013'
+      }
+    ]
   },
   {
     key: 'maliban-biscuits',
@@ -557,10 +571,19 @@ export default function BusinessesSection() {
                     </span>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                       {selectedBusiness.managers.map((m, mIdx) => (
-                        <div key={mIdx} className="p-3 rounded-xl bg-slate-50 border border-neutral-200/80 space-y-1 text-xs">
-                          <div className="flex items-center gap-2">
-                            <UserCheck className="w-3.5 h-3.5 text-[#003399] shrink-0" />
-                            <span className="font-bold text-neutral-900 truncate">{m.name}</span>
+                        <div key={mIdx} className="p-3 rounded-xl bg-slate-50 border border-neutral-200/80 space-y-1.5 text-xs">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <UserCheck className="w-3.5 h-3.5 text-[#003399] shrink-0" />
+                              <span className="font-bold text-neutral-900 truncate">
+                                {m.name || m.branch || (isSi ? `කළමනාකරු #${mIdx + 1}` : `Manager #${mIdx + 1}`)}
+                              </span>
+                            </div>
+                            {m.branch && (
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-[#003399] border border-blue-200/60 shrink-0">
+                                {m.branch}
+                              </span>
+                            )}
                           </div>
                           {m.location && (
                             <div className="flex items-center gap-2 text-neutral-500 text-[11px] truncate">

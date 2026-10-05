@@ -177,7 +177,22 @@ export default function BusinessManagementTab() {
     setFormLocation(b.location || '');
     setFormHotline(b.hotline || '');
 
-    if (b.managers && Array.isArray(b.managers) && b.managers.length > 0) {
+    if (b.key === 'consumer' && (!b.managers || b.managers.length <= 1)) {
+      setFormManagers([
+        {
+          branch: 'Sales Development Manager',
+          name: (b.managers && b.managers[0]?.name) || b.manager || 'එස් එම් රණසිංහ',
+          location: (b.managers && b.managers[0]?.location) || b.location || 'පාරිභෝගික අංශය, සමිති ගොඩනැගිල්ල, හැට්ටිපොල',
+          hotline: (b.managers && b.managers[0]?.hotline) || b.hotline || '037 229 1013'
+        },
+        {
+          branch: 'Store Manager',
+          name: (b.managers && b.managers[1]?.name) || '',
+          location: (b.managers && b.managers[1]?.location) || b.location || 'පාරිභෝගික අංශය, සමිති ගොඩනැගිල්ල, හැට්ටිපොල',
+          hotline: (b.managers && b.managers[1]?.hotline) || b.hotline || '037 229 1013'
+        }
+      ]);
+    } else if (b.managers && Array.isArray(b.managers) && b.managers.length > 0) {
       setFormManagers(b.managers.map(m => ({
         branch: m.branch || '',
         name: m.name || '',
@@ -1096,9 +1111,11 @@ export default function BusinessManagementTab() {
                           <div className="flex items-center justify-between pb-2 border-b border-neutral-100">
                             <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500 font-mono flex items-center gap-1.5">
                               <span className="w-2 h-2 rounded-full bg-[#003399]" />
-                              {isRural 
-                                ? (locale === 'si' ? `බැංකු ශාඛාව #${index + 1}` : `Branch Bank #${index + 1}`)
-                                : (locale === 'si' ? `කළමනාකරු / ශාඛාව #${index + 1}` : `Manager / Branch #${index + 1}`)}
+                              {mgr.branch ? mgr.branch : (
+                                isRural 
+                                  ? (locale === 'si' ? `බැංකු ශාඛාව #${index + 1}` : `Branch Bank #${index + 1}`)
+                                  : (locale === 'si' ? `කළමනාකරු / ශාඛාව #${index + 1}` : `Manager / Branch #${index + 1}`)
+                              )}
                             </span>
                             {formManagers.length > 1 && (
                               <button
@@ -1117,16 +1134,16 @@ export default function BusinessManagementTab() {
                             <div>
                               <label 
                                 className="h-5 flex items-center text-xs font-bold text-neutral-800 mb-1.5 whitespace-nowrap truncate"
-                                title={locale === 'si' ? 'ශාඛාව / බැංකුවේ නම' : 'Branch / Bank Name'}
+                                title={isRural ? (locale === 'si' ? 'ශාඛාව / බැංකුවේ නම' : 'Branch / Bank Name') : (locale === 'si' ? 'තනතුර / කාර්යභාරය' : 'Designation / Role')}
                               >
-                                {locale === 'si' ? 'ශාඛාව / බැංකුව' : 'Branch / Bank Name'}
+                                {isRural ? (locale === 'si' ? 'ශාඛාව / බැංකුව' : 'Branch / Bank Name') : (locale === 'si' ? 'තනතුර / කාර්යභාරය' : 'Designation / Role')}
                               </label>
                               <input
                                 type="text"
                                 value={mgr.branch}
                                 onChange={e => handleUpdateManager(index, 'branch', e.target.value)}
-                                placeholder={isRural ? (locale === 'si' ? "උදා: හැට්ටිපොල ශාඛාව" : "e.g. Hettipola Branch") : (locale === 'si' ? "ප්‍රධාන කාර්යාලය / අංශය" : "e.g. Head Office / Unit")}
-                                className="w-full h-9 px-3 py-2 rounded-xl bg-slate-50 border border-neutral-200 text-xs text-neutral-900 focus:bg-white focus:border-[#003399] focus:outline-hidden transition-colors"
+                                placeholder={isRural ? (locale === 'si' ? "උදා: හැට්ටිපොල ශාඛාව" : "e.g. Hettipola Branch") : (locale === 'si' ? "උදා: Store Manager" : "e.g. Store Manager")}
+                                className="w-full h-9 px-3 py-2 rounded-xl bg-slate-50 border border-neutral-200 text-xs text-neutral-900 focus:bg-white focus:border-[#003399] focus:outline-hidden transition-colors font-medium"
                               />
                             </div>
                             <div>
