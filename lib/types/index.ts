@@ -6,7 +6,7 @@ export interface User {
   phone: string;
   email?: string | null;
   password?: string;
-  role: 'user' | 'admin';
+  role: 'user' | 'admin' | 'superadmin';
   created_at: string;
 }
 

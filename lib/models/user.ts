@@ -33,14 +33,15 @@ export async function findUserByNicOrUsername(identifier: string): Promise<User 
 
   if (!adminError && adminData && adminData.length > 0) {
     const admin = adminData[0] as AdminRow;
+    const isSuper = admin.role === 'superadmin' || admin.username.toLowerCase() === 'superadmin';
     return {
       id: admin.id,
       username: admin.username,
-      full_name: 'Administrator',
-      nic: 'ADMIN',
+      full_name: isSuper ? 'Super Administrator' : 'Administrator',
+      nic: isSuper ? 'SUPERADMIN' : 'ADMIN',
       phone: '',
       password: admin.password,
-      role: 'admin',
+      role: isSuper ? 'superadmin' : 'admin',
       created_at: admin.created_at
     };
   }
@@ -69,17 +70,30 @@ export async function getAllUsers(): Promise<Omit<User, 'password'>[]> {
   return data as Omit<User, 'password'>[];
 }
 
+export async function getAllAdmins(): Promise<Omit<User, 'password'>[]> {
+  const { data, error } = await supabase
+    .from('users')
+    .select('id, username, full_name, nic, phone, email, role, created_at')
+    .in('role', ['admin', 'superadmin'])
+    .order('created_at', { ascending: true });
+
+  if (error || !data) return [];
+  return data as Omit<User, 'password'>[];
+}
+
 export async function createUser(params: {
   fullName: string;
   nic: string;
   phone: string;
   password: string;
   email?: string;
+  role?: 'user' | 'admin' | 'superadmin';
 }): Promise<User> {
   const cleanNic = params.nic.trim();
   const cleanName = params.fullName.trim();
   const cleanPhone = params.phone.trim();
   const username = cleanNic.toLowerCase();
+  const role = params.role || 'user';
 
   const { data, error } = await supabase
     .from('users')
@@ -90,7 +104,7 @@ export async function createUser(params: {
       phone: cleanPhone,
       email: params.email?.trim() || null,
       password: params.password,
-      role: 'user'
+      role
     })
     .select('id, username, full_name, nic, phone, email, role, created_at')
     .single();
@@ -102,13 +116,59 @@ export async function createUser(params: {
   return data as User;
 }
 
+export async function createAdminUser(params: {
+  username: string;
+  fullName: string;
+  nic: string;
+  phone: string;
+  password: string;
+  email?: string;
+  role?: 'admin' | 'superadmin';
+}): Promise<User> {
+  const cleanUsername = params.username.trim().toLowerCase();
+  const cleanNic = params.nic.trim();
+  const cleanName = params.fullName.trim();
+  const cleanPhone = params.phone.trim();
+  const role = params.role || 'admin';
+
+  const { data, error } = await supabase
+    .from('users')
+    .insert({
+      username: cleanUsername,
+      full_name: cleanName,
+      nic: cleanNic,
+      phone: cleanPhone,
+      email: params.email?.trim() || null,
+      password: params.password.trim(),
+      role
+    })
+    .select('id, username, full_name, nic, phone, email, role, created_at')
+    .single();
+
+  if (error || !data) {
+    throw new Error(error?.message || 'Failed to create admin account');
+  }
+
+  try {
+    await supabase.from('admin_users').upsert({
+      username: cleanUsername,
+      password: params.password.trim(),
+      role
+    });
+  } catch (err) {
+    console.error('Error syncing to admin_users table:', err);
+  }
+
+  return data as User;
+}
+
 export async function updateUser(
   id: number,
   params: {
     fullName?: string;
     nic?: string;
     phone?: string;
-    role?: 'user' | 'admin';
+    role?: 'user' | 'admin' | 'superadmin';
     password?: string;
   }
 ): Promise<User | null> {
@@ -119,7 +179,6 @@ export async function updateUser(
   }
   if (params.nic !== undefined) {
     updates.nic = params.nic.trim();
-    updates.username = params.nic.trim().toLowerCase();
   }
   if (params.phone !== undefined) {
     updates.phone = params.phone.trim();
@@ -143,14 +202,45 @@ export async function updateUser(
     .single();
 
   if (error || !data) return null;
+
+  // Sync to admin_users if role is admin or superadmin
+  if (data.role === 'admin' || data.role === 'superadmin') {
+    try {
+      const adminUpdates: Record<string, unknown> = {
+        username: data.username,
+        role: data.role
+      };
+      if (params.password && params.password.trim().length > 0) {
+        adminUpdates.password = params.password.trim();
+      }
+      await supabase.from('admin_users').upsert(adminUpdates);
+    } catch (syncErr) {
+      console.error('Error syncing update to admin_users:', syncErr);
+    }
+  }
+
   return data as User;
 }
 
 export async function deleteUser(id: number): Promise<boolean> {
+  const targetUser = await findUserById(id);
+  if (!targetUser) return false;
+
   const { error } = await supabase
     .from('users')
     .delete()
     .eq('id', id);
+
+  if (!error && (targetUser.role === 'admin' || targetUser.role === 'superadmin')) {
+    try {
+      await supabase
+        .from('admin_users')
+        .delete()
+        .eq('username', targetUser.username);
+    } catch (e) {
+      console.error('Error removing from admin_users:', e);
+    }
+  }
 
   return !error;
 }

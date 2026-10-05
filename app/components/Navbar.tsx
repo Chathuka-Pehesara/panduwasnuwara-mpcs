@@ -5,7 +5,7 @@ import { useTranslations, useLocale } from 'next-intl';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { User as UserIcon, LogIn, ShieldCheck, LogOut, ArrowRight, ChevronDown, Globe } from 'lucide-react';
+import { User as UserIcon, LogIn, ShieldCheck, LogOut, ArrowRight, ChevronDown } from 'lucide-react';
 import { businessesData } from '@/app/components/BusinessesSection';
 import MembershipDropdown from '@/app/components/MembershipDropdown';
 
@@ -29,16 +29,6 @@ export default function Navbar() {
   const [isBusinessMenuOpen, setIsBusinessMenuOpen] = useState(false);
   const [isMobileBusinessesOpen, setIsMobileBusinessesOpen] = useState(false);
   const businessMenuRef = useRef<HTMLDivElement>(null);
-
-  const getTargetUrl = (targetLocale: string) => {
-    if (!pathname) return `/${targetLocale}`;
-    const segments = pathname.split('/');
-    if (segments[1] === 'si' || segments[1] === 'en') {
-      segments[1] = targetLocale;
-      return segments.join('/') || `/${targetLocale}`;
-    }
-    return `/${targetLocale}${pathname}`;
-  };
 
   const [auth, setAuth] = useState<AuthState>({
     isAuthenticated: false,
@@ -260,19 +250,8 @@ export default function Navbar() {
             </Link>
           </div>
 
-          {/* Desktop Controls (Language + Auth) */}
+          {/* Desktop Auth Controls */}
           <div className="hidden lg:flex items-center gap-2 xl:gap-3 shrink-0">
-            {/* Desktop Language Switcher Pill */}
-            <Link
-              href={getTargetUrl(isSi ? 'en' : 'si')}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-semibold transition-all border border-white/15 hover:border-white/25 shadow-2xs group shrink-0"
-              title={isSi ? 'Switch to English' : 'සිංහල භාෂාවට මාරු වන්න'}
-            >
-              <Globe className="w-3.5 h-3.5 text-blue-300 group-hover:rotate-45 transition-transform duration-300" />
-              <span className={`px-1 py-0.2 rounded text-[11px] font-bold ${isSi ? 'text-amber-300' : 'text-neutral-400'}`}>සිං</span>
-              <span className="text-white/30 text-[10px]">|</span>
-              <span className={`px-1 py-0.2 rounded text-[11px] font-bold ${!isSi ? 'text-amber-300' : 'text-neutral-400'}`}>EN</span>
-            </Link>
             {auth.isAuthenticated ? (
               <div className="flex items-center gap-2">
                 {auth.isAdmin ? (
@@ -486,34 +465,6 @@ export default function Navbar() {
                   </Link>
                 </div>
               )}
-
-              {/* Mobile Language Switcher */}
-              <div className="pt-2 border-t border-white/10 flex items-center justify-between">
-                <span className="text-xs text-neutral-400 font-medium flex items-center gap-1.5">
-                  <Globe className="w-3.5 h-3.5 text-blue-300" />
-                  <span>{isSi ? 'භාෂාව / Language' : 'Language / භාෂාව'}</span>
-                </span>
-                <div className="inline-flex items-center rounded-xl bg-white/10 p-0.5 border border-white/15">
-                  <Link
-                    href={getTargetUrl('si')}
-                    onClick={() => setIsOpen(false)}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                      isSi ? 'bg-[#003399] text-white shadow-xs' : 'text-neutral-400 hover:text-white'
-                    }`}
-                  >
-                    සිංහල
-                  </Link>
-                  <Link
-                    href={getTargetUrl('en')}
-                    onClick={() => setIsOpen(false)}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                      !isSi ? 'bg-[#003399] text-white shadow-xs' : 'text-neutral-400 hover:text-white'
-                    }`}
-                  >
-                    English
-                  </Link>
-                </div>
-              </div>
             </div>
           </div>
         </div>

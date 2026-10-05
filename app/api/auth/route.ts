@@ -9,7 +9,9 @@ function getAuthFromToken(token?: string) {
     if (parts.length >= 3 && parts[0] === 'session') {
       const username = decodeURIComponent(parts[1]);
       const role = parts[2];
-      return { username, role, isAdmin: role === 'admin' };
+      const isAdmin = role === 'admin' || role === 'superadmin';
+      const isSuperAdmin = role === 'superadmin';
+      return { username, role, isAdmin, isSuperAdmin };
     }
   } catch (err) {
     console.error('Error parsing token:', err);
@@ -37,6 +39,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     isAuthenticated: true,
     isAdmin: auth.isAdmin,
+    isSuperAdmin: auth.isSuperAdmin,
     user: user ? {
       id: user.id,
       username: user.username,
@@ -142,7 +145,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Invalid NIC or password' }, { status: 401 });
     }
 
-    const isAdmin = foundUser.role === 'admin';
+    const isAdmin = foundUser.role === 'admin' || foundUser.role === 'superadmin';
+    const isSuperAdmin = foundUser.role === 'superadmin';
     const token = `session_${encodeURIComponent(foundUser.username)}_${foundUser.role}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
     const response = NextResponse.json({
@@ -155,7 +159,8 @@ export async function POST(req: NextRequest) {
         phone: foundUser.phone || '',
         email: foundUser.email || '',
         role: foundUser.role,
-        isAdmin
+        isAdmin,
+        isSuperAdmin
       }
     });
 

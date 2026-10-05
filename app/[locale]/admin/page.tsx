@@ -55,6 +55,7 @@ import MembershipApplicationsTab from '@/app/components/admin/MembershipApplicat
 import AdminDashboardOverview from '@/app/components/admin/AdminDashboardOverview';
 import BusinessManagementTab from '@/app/components/admin/BusinessManagementTab';
 import BoardManagementTab from '@/app/components/admin/BoardManagementTab';
+import AdminManagementTab from '@/app/components/admin/AdminManagementTab';
 
 const BUSINESS_CATEGORIES = [
   { key: 'rural-bank', titleEn: 'Rural Bank', titleSi: 'ග්‍රාමීය බැංකුව' },
@@ -83,7 +84,9 @@ export default function AdminDashboardPage() {
   const locale = useLocale();
   const router = useRouter();
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'applications' | 'metrics' | 'board' | 'news' | 'gallery' | 'messages' | 'services' | 'fuel' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'admins' | 'applications' | 'metrics' | 'board' | 'news' | 'gallery' | 'messages' | 'services' | 'fuel' | 'settings'>('dashboard');
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [appsTotalCount, setAppsTotalCount] = useState(0);
   const [appsPendingCount, setAppsPendingCount] = useState(0);
   const [boardCount, setBoardCount] = useState(0);
@@ -212,7 +215,7 @@ export default function AdminDashboardPage() {
   const [editFullName, setEditFullName] = useState('');
   const [editNic, setEditNic] = useState('');
   const [editPhone, setEditPhone] = useState('');
-  const [editRole, setEditRole] = useState<'user' | 'admin'>('user');
+  const [editRole, setEditRole] = useState<'user' | 'admin' | 'superadmin'>('user');
   const [editPassword, setEditPassword] = useState('');
   const [isSavingUser, setIsSavingUser] = useState(false);
   const [userError, setUserError] = useState('');
@@ -326,6 +329,8 @@ export default function AdminDashboardPage() {
         router.push(`/${locale}/login`);
         return;
       }
+      setCurrentUser(data.user);
+      setIsSuperAdmin(Boolean(data.isSuperAdmin || data.user?.role === 'superadmin'));
       loadAdminData();
     } catch {
       router.push(`/${locale}/login`);
@@ -1344,6 +1349,29 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
               </span>
             </button>
 
+            {/* Super Admin Tab: Administrators */}
+            {isSuperAdmin && (
+              <button
+                onClick={() => {
+                  setActiveTab('admins');
+                  setIsMobileSidebarOpen(false);
+                }}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                  activeTab === 'admins'
+                    ? 'bg-neutral-900 text-white shadow-xs'
+                    : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <ShieldCheck className="w-4 h-4 text-purple-600" />
+                  <span>{locale === 'si' ? 'පරිපාලකවරුන් කළමනාකරණය' : 'Administrators'}</span>
+                </div>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700">
+                  SUPER
+                </span>
+              </button>
+            )}
+
             {/* Membership Applications Tab */}
             <button
               onClick={() => {
@@ -1564,12 +1592,23 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
         {/* Sidebar Bottom (User identity & Log out) */}
         <div className="pt-4 border-t border-neutral-100 space-y-3">
           <div className="flex items-center gap-3 px-1">
-            <div className="w-8 h-8 rounded-full bg-neutral-100 border border-neutral-200 flex items-center justify-center text-neutral-700 font-bold text-xs">
-              AD
+            <div className={`w-8 h-8 rounded-full border flex items-center justify-center font-bold text-xs ${
+              isSuperAdmin 
+                ? 'bg-purple-100 border-purple-300 text-purple-800' 
+                : 'bg-neutral-100 border-neutral-200 text-neutral-700'
+            }`}>
+              {isSuperAdmin ? 'SA' : 'AD'}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold text-neutral-900 truncate">Administrator</p>
-              <p className="text-[10px] text-neutral-400 font-mono">admin</p>
+              <p className="text-xs font-semibold text-neutral-900 truncate">
+                {currentUser?.fullName || (isSuperAdmin ? 'Super Administrator' : 'Administrator')}
+              </p>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-neutral-400 font-mono truncate">{currentUser?.username || 'admin'}</span>
+                {isSuperAdmin && (
+                  <span className="text-[9px] font-bold px-1 rounded bg-purple-100 text-purple-700">SUPER</span>
+                )}
+              </div>
             </div>
           </div>
 
@@ -1591,6 +1630,7 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
             <h1 className="font-condensed text-xl font-bold text-neutral-900 leading-tight">
               {activeTab === 'dashboard' && (locale === 'si' ? 'පාලන පුවරුව සහ දළ විශ්ලේෂණය' : 'Dashboard Overview')}
               {activeTab === 'users' && t('usersTab')}
+              {activeTab === 'admins' && (locale === 'si' ? 'පරිපාලක ගිණුම් කළමනාකරණය' : 'Administrator Accounts Management')}
               {activeTab === 'applications' && (locale === 'si' ? 'සාමාජිකත්ව අයදුම්පත් කළමනාකරණය' : 'Membership Applications Management')}
               {activeTab === 'metrics' && t('metricsTab')}
               {activeTab === 'board' && (locale === 'si' ? 'අධ්‍යක්ෂ මණ්ඩල කළමනාකරණය' : 'Board of Directors Management')}
@@ -1604,6 +1644,8 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
             <p className="text-xs text-neutral-500">
               {activeTab === 'dashboard'
                 ? (locale === 'si' ? 'වෙබ් අඩවි ක්‍රියාකාරකම්, සාමාජිකයින්, අයදුම්පත් සහ පාරිභෝගික විමසීම් සජීවීව නිරීක්ෂණය කරන්න' : 'Real-time monitoring of website activity, members, applications, and customer inquiries')
+                : activeTab === 'admins'
+                  ? (locale === 'si' ? 'පද්ධති පරිපාලකයින්ගේ ප්‍රවේශ අයිතීන්, මුරපද සහ නව පරිපාලක ගිණුම් කළමනාකරණය' : 'Manage system administrator privileges, credentials, and access roles')
                 : activeTab === 'applications' 
                   ? (locale === 'si' ? 'අන්තර්ජාලය හරහා ඉදිරිපත් කළ සාමාජික අයදුම්පත් පරීක්ෂා කිරීම, අනුමත කිරීම, සංස්කරණය හා මකා දැමීම' : 'Review, approve, edit, and manage member registration submissions and certified forms')
                   : activeTab === 'board'
@@ -1642,6 +1684,11 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
               setAppsPendingCount(pending);
             }}
           />
+        )}
+
+        {/* TAB: SUPER ADMIN - ADMINISTRATORS */}
+        {activeTab === 'admins' && isSuperAdmin && (
+          <AdminManagementTab currentUsername={currentUser?.username} />
         )}
 
         {/* TAB 1: USERS MANAGEMENT */}
@@ -3053,11 +3100,12 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
                 <label className="block text-xs font-bold text-neutral-700">{t('thRole')}</label>
                 <select
                   value={editRole}
-                  onChange={e => setEditRole(e.target.value as 'user' | 'admin')}
+                  onChange={e => setEditRole(e.target.value as 'user' | 'admin' | 'superadmin')}
                   className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-neutral-200 text-xs text-neutral-900 focus:outline-hidden focus:border-[#003399]"
                 >
                   <option value="user">{t('roleUser')}</option>
                   <option value="admin">{t('roleAdmin')}</option>
+                  {isSuperAdmin && <option value="superadmin">Super Administrator</option>}
                 </select>
               </div>
 
