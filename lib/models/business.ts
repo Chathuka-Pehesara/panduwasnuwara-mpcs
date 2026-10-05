@@ -8,7 +8,7 @@ export async function getAllBusinesses(onlyActive: boolean = false): Promise<Bus
     .select(`
       id, key, title_si, title_en, tagline_si, tagline_en,
       category_si, category_en, description_si, description_en,
-      manager, location, hotline, image_src, cover_image, is_new, is_active, display_order,
+      manager, location, hotline, managers, image_src, cover_image, is_new, is_active, display_order,
       services, services_en, created_at, updated_at
     `)
     .order('display_order', { ascending: true })
@@ -46,6 +46,11 @@ export async function getAllBusinesses(onlyActive: boolean = false): Promise<Bus
     manager: r.manager || '',
     location: r.location || '',
     hotline: r.hotline || '',
+    managers: Array.isArray(r.managers)
+      ? r.managers
+      : (typeof r.managers === 'string'
+          ? (r.managers ? JSON.parse(r.managers) : [])
+          : (r.manager ? [{ name: r.manager, location: r.location || '', hotline: r.hotline || '' }] : [])),
     image_src: r.image_src || '',
     cover_image: r.cover_image || null,
     is_new: Boolean(r.is_new),
@@ -71,6 +76,11 @@ export async function getBusinessById(id: number): Promise<BusinessItem | null> 
 
   return {
     ...data,
+    managers: Array.isArray(data.managers)
+      ? data.managers
+      : (typeof data.managers === 'string'
+          ? (data.managers ? JSON.parse(data.managers) : [])
+          : (data.manager ? [{ name: data.manager, location: data.location || '', hotline: data.hotline || '' }] : [])),
     services: Array.isArray(data.services) ? data.services : (typeof data.services === 'string' ? JSON.parse(data.services || '[]') : []),
     services_en: Array.isArray(data.services_en) ? data.services_en : (typeof data.services_en === 'string' ? JSON.parse(data.services_en || '[]') : [])
   };
@@ -89,6 +99,7 @@ export interface CreateBusinessInput {
   manager?: string;
   location?: string;
   hotline?: string;
+  managers?: { branch?: string; name: string; location?: string; hotline?: string }[];
   image_src?: string;
   cover_image?: string;
   is_new?: boolean;
@@ -100,6 +111,15 @@ export interface CreateBusinessInput {
 
 export async function createBusiness(data: CreateBusinessInput): Promise<BusinessItem> {
   const cleanKey = data.key.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+
+  const rawManagers = Array.isArray(data.managers) ? data.managers.filter(m => m && (m.name?.trim() || m.branch?.trim())) : [];
+  const primaryManager = rawManagers[0] || (data.manager ? { name: data.manager, location: data.location, hotline: data.hotline } : null);
+  const managerName = primaryManager?.name?.trim() || data.manager?.trim() || null;
+  const managerLocation = primaryManager?.location?.trim() || data.location?.trim() || null;
+  const managerHotline = primaryManager?.hotline?.trim() || data.hotline?.trim() || null;
+  const managersJson = rawManagers.length > 0
+    ? rawManagers
+    : (managerName ? [{ name: managerName, location: managerLocation || '', hotline: managerHotline || '' }] : []);
 
   const { data: inserted, error } = await supabase
     .from('businesses')
@@ -113,9 +133,10 @@ export async function createBusiness(data: CreateBusinessInput): Promise<Busines
       category_en: data.category_en?.trim() || null,
       description_si: data.description_si?.trim() || null,
       description_en: data.description_en?.trim() || null,
-      manager: data.manager?.trim() || null,
-      location: data.location?.trim() || null,
-      hotline: data.hotline?.trim() || null,
+      manager: managerName,
+      location: managerLocation,
+      hotline: managerHotline,
+      managers: managersJson,
       image_src: data.image_src?.trim() || null,
       cover_image: data.cover_image?.trim() || null,
       is_new: Boolean(data.is_new),
@@ -133,6 +154,7 @@ export async function createBusiness(data: CreateBusinessInput): Promise<Busines
 
   return {
     ...inserted,
+    managers: Array.isArray(inserted.managers) ? inserted.managers : [],
     services: Array.isArray(inserted.services) ? inserted.services : [],
     services_en: Array.isArray(inserted.services_en) ? inserted.services_en : []
   };
@@ -154,9 +176,25 @@ export async function updateBusiness(id: number, data: Partial<CreateBusinessInp
   if (data.category_en !== undefined) updatePayload.category_en = data.category_en?.trim() || null;
   if (data.description_si !== undefined) updatePayload.description_si = data.description_si?.trim() || null;
   if (data.description_en !== undefined) updatePayload.description_en = data.description_en?.trim() || null;
-  if (data.manager !== undefined) updatePayload.manager = data.manager?.trim() || null;
-  if (data.location !== undefined) updatePayload.location = data.location?.trim() || null;
-  if (data.hotline !== undefined) updatePayload.hotline = data.hotline?.trim() || null;
+
+  if (data.managers !== undefined) {
+    const rawManagers = Array.isArray(data.managers) ? data.managers.filter(m => m && (m.name?.trim() || m.branch?.trim())) : [];
+    updatePayload.managers = rawManagers;
+    if (rawManagers.length > 0) {
+      updatePayload.manager = (rawManagers[0].name || rawManagers[0].branch || '').trim();
+      updatePayload.location = rawManagers[0].location?.trim() || null;
+      updatePayload.hotline = rawManagers[0].hotline?.trim() || null;
+    } else if (data.manager === undefined) {
+      updatePayload.manager = null;
+      updatePayload.location = null;
+      updatePayload.hotline = null;
+    }
+  } else {
+    if (data.manager !== undefined) updatePayload.manager = data.manager?.trim() || null;
+    if (data.location !== undefined) updatePayload.location = data.location?.trim() || null;
+    if (data.hotline !== undefined) updatePayload.hotline = data.hotline?.trim() || null;
+  }
+
   if (data.image_src !== undefined) updatePayload.image_src = data.image_src?.trim() || null;
   if (data.cover_image !== undefined) updatePayload.cover_image = data.cover_image?.trim() || null;
   if (data.is_new !== undefined) updatePayload.is_new = Boolean(data.is_new);
@@ -179,6 +217,7 @@ export async function updateBusiness(id: number, data: Partial<CreateBusinessInp
 
   return {
     ...updated,
+    managers: Array.isArray(updated.managers) ? updated.managers : [],
     services: Array.isArray(updated.services) ? updated.services : [],
     services_en: Array.isArray(updated.services_en) ? updated.services_en : []
   };

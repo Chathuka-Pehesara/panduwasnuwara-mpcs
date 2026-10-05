@@ -7,55 +7,133 @@ function isAdmin(req: NextRequest): boolean {
   if (!token) return false;
   try {
     const parts = token.split('_');
-    return parts.length >= 3 && parts[2] === 'admin';
+    return parts.length >= 3 && (parts[2] === 'admin' || parts[2] === 'superadmin');
   } catch {
     return false;
   }
 }
 
 /**
- * Simple robust CSV / TSV text parser
+ * RFC-4180 compliant CSV line splitter supporting quoted values with commas
+ */
+function splitCsvLine(line: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"' || char === "'") {
+      inQuotes = !inQuotes;
+    } else if ((char === ',' || char === '\t' || char === ';') && !inQuotes) {
+      result.push(current.trim().replace(/^["']|["']$/g, ''));
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  result.push(current.trim().replace(/^["']|["']$/g, ''));
+  return result;
+}
+
+/**
+ * Robust CSV parser supporting exact format:
+ * Member Number, NIC, FULL NAME, ADDRESS, POSTAL ADDRESS, GENDER
  */
 function parseMemberCsv(text: string): MemberRecord[] {
   const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   if (lines.length === 0) return [];
 
   // Inspect first line to check if header exists
-  const firstLine = lines[0].toLowerCase();
-  const hasHeader = firstLine.includes('name') || firstLine.includes('nic') || firstLine.includes('member') || firstLine.includes('phone');
-  const dataLines = hasHeader ? lines.slice(1) : lines;
+  const rawHeaders = splitCsvLine(lines[0]).map(h => h.toLowerCase().replace(/[^a-z0-9]/g, ''));
+  const hasHeader = rawHeaders.some(h => 
+    h.includes('name') || h.includes('nic') || h.includes('member') || h.includes('address') || h.includes('gender')
+  );
 
+  let colMap = {
+    memberNumber: 0,
+    nic: 1,
+    fullName: 2,
+    address: 3,
+    postalAddress: 4,
+    gender: 5,
+    phone: -1
+  };
+
+  if (hasHeader) {
+    colMap = {
+      memberNumber: rawHeaders.findIndex(h => h.includes('member') || h.includes('no') || h.includes('id') || h.includes('reg')),
+      nic: rawHeaders.findIndex(h => h.includes('nic') || h.includes('identity')),
+      fullName: rawHeaders.findIndex(h => (h.includes('name') && !h.includes('member')) || h === 'fullname' || h === 'name'),
+      address: rawHeaders.findIndex(h => h === 'address' || (h.includes('address') && !h.includes('postal'))),
+      postalAddress: rawHeaders.findIndex(h => h.includes('postal') || h.includes('postaddress') || h.includes('mailing')),
+      gender: rawHeaders.findIndex(h => h.includes('gender') || h.includes('sex')),
+      phone: rawHeaders.findIndex(h => h.includes('phone') || h.includes('mobile') || h.includes('contact') || h.includes('tel'))
+    };
+
+    if (colMap.fullName === -1) {
+      colMap.fullName = rawHeaders.findIndex(h => h.includes('name'));
+    }
+  }
+
+  const dataLines = hasHeader ? lines.slice(1) : lines;
   const records: MemberRecord[] = [];
 
   for (const line of dataLines) {
-    // Split by comma or tab or semicolon, taking care of basic quoted fields
-    const parts = line.split(/[,;\t]/).map(p => p.trim().replace(/^["']|["']$/g, ''));
+    const parts = splitCsvLine(line);
     if (parts.length === 0 || !parts.some(Boolean)) continue;
 
-    // Smart field inference
     let memberNumber = '';
-    let fullName = '';
     let nic = '';
+    let fullName = '';
+    let address = '';
+    let postalAddress = '';
+    let gender = '';
     let phone = '';
 
-    if (parts.length === 1) {
-      fullName = parts[0];
-    } else if (parts.length === 2) {
-      fullName = parts[0];
-      nic = parts[1];
-    } else if (parts.length === 3) {
-      memberNumber = parts[0];
-      fullName = parts[1];
-      nic = parts[2];
+    if (hasHeader) {
+      if (colMap.memberNumber !== -1 && parts[colMap.memberNumber]) memberNumber = parts[colMap.memberNumber];
+      if (colMap.nic !== -1 && parts[colMap.nic]) nic = parts[colMap.nic];
+      if (colMap.fullName !== -1 && parts[colMap.fullName]) fullName = parts[colMap.fullName];
+      if (colMap.address !== -1 && parts[colMap.address]) address = parts[colMap.address];
+      if (colMap.postalAddress !== -1 && parts[colMap.postalAddress]) postalAddress = parts[colMap.postalAddress];
+      if (colMap.gender !== -1 && parts[colMap.gender]) gender = parts[colMap.gender];
+      if (colMap.phone !== -1 && parts[colMap.phone]) phone = parts[colMap.phone];
     } else {
-      memberNumber = parts[0];
-      fullName = parts[1];
-      nic = parts[2];
-      phone = parts[3];
+      // Positional exact format: Member Number, NIC, FULL NAME, ADDRESS, POSTAL ADDRESS, GENDER
+      if (parts.length >= 6) {
+        memberNumber = parts[0];
+        nic = parts[1];
+        fullName = parts[2];
+        address = parts[3];
+        postalAddress = parts[4];
+        gender = parts[5];
+        if (parts.length >= 7) phone = parts[6];
+      } else if (parts.length === 5) {
+        memberNumber = parts[0];
+        nic = parts[1];
+        fullName = parts[2];
+        address = parts[3];
+        postalAddress = parts[4];
+      } else if (parts.length === 4) {
+        memberNumber = parts[0];
+        nic = parts[1];
+        fullName = parts[2];
+        address = parts[3];
+      } else if (parts.length === 3) {
+        memberNumber = parts[0];
+        nic = parts[1];
+        fullName = parts[2];
+      } else if (parts.length === 2) {
+        fullName = parts[0];
+        nic = parts[1];
+      } else if (parts.length === 1) {
+        fullName = parts[0];
+      }
     }
 
     if (fullName) {
-      records.push({ memberNumber, fullName, nic, phone });
+      records.push({ memberNumber, nic, fullName, address, postalAddress, gender, phone });
     }
   }
 

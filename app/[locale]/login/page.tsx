@@ -29,13 +29,32 @@ export default function LoginPage() {
 
   const checkStatus = async () => {
     try {
-      const res = await fetch('/api/auth');
+      // If there is no active tab session, prevent using cached or stale session
+      if (typeof window !== 'undefined' && !sessionStorage.getItem('mpcs_active_session')) {
+        await fetch('/api/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'logout' })
+        }).catch(() => {});
+        setIsAuthenticated(false);
+        setCurrentUser(null);
+        setIsAdmin(false);
+        return;
+      }
+
+      const res = await fetch('/api/auth', {
+        headers: { 'Cache-Control': 'no-cache' }
+      });
       const data = await res.json();
       if (data.isAuthenticated) {
         setIsAuthenticated(true);
         setCurrentUser(data.user);
         setIsAdmin(Boolean(data.isAdmin));
       } else {
+        if (typeof window !== 'undefined') {
+          sessionStorage.removeItem('mpcs_active_session');
+          sessionStorage.removeItem('mpcs_active_user');
+        }
         setIsAuthenticated(false);
         setCurrentUser(null);
         setIsAdmin(false);
@@ -50,12 +69,28 @@ export default function LoginPage() {
   };
 
   useEffect(() => {
+    // Clear state initially so no cached input is shown
+    setNic('');
+    setPassword('');
+    setErrorMsg('');
     checkStatus();
+
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       if (params.get('registered') === 'true') {
         setJustRegistered(true);
       }
+
+      // Prevent back-forward cache (bfcache) from restoring stale authenticated view
+      const handlePageShow = (e: PageTransitionEvent) => {
+        if (e.persisted) {
+          checkStatus();
+        }
+      };
+      window.addEventListener('pageshow', handlePageShow);
+      return () => {
+        window.removeEventListener('pageshow', handlePageShow);
+      };
     }
   }, []);
 
@@ -74,6 +109,9 @@ export default function LoginPage() {
       const data = await res.json();
       if (data.success) {
         if (typeof window !== 'undefined') {
+          // Store tab-scoped active session flag
+          sessionStorage.setItem('mpcs_active_session', 'true');
+          sessionStorage.setItem('mpcs_active_user', JSON.stringify(data.user));
           window.dispatchEvent(new Event('auth-change'));
           window.location.href = data.user?.isAdmin ? `/${locale}/admin` : `/${locale}`;
         }
@@ -93,13 +131,16 @@ export default function LoginPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'logout' })
     });
-    setIsAuthenticated(false);
-    setIsAdmin(false);
-    setCurrentUser(null);
     if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('mpcs_active_session');
+      sessionStorage.removeItem('mpcs_active_user');
+      sessionStorage.clear();
       window.dispatchEvent(new Event('auth-change'));
       window.location.reload();
     }
+    setIsAuthenticated(false);
+    setIsAdmin(false);
+    setCurrentUser(null);
   };
 
   // WhatsApp Forgot Password Dispatcher
@@ -191,7 +232,7 @@ export default function LoginPage() {
             </div>
           </div>
         ) : (
-          <form onSubmit={handleLogin} className="space-y-4 pt-2">
+          <form onSubmit={handleLogin} autoComplete="off" className="space-y-4 pt-2">
             {errorMsg && (
               <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
@@ -206,6 +247,7 @@ export default function LoginPage() {
               <input
                 type="text"
                 required
+                autoComplete="off"
                 value={nic}
                 onChange={(e) => setNic(e.target.value)}
                 placeholder={t('nicPlaceholder')}
@@ -229,6 +271,7 @@ export default function LoginPage() {
               <input
                 type="password"
                 required
+                autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"

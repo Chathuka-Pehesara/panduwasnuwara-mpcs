@@ -46,13 +46,16 @@ import {
   RotateCcw,
   Sparkles,
   FileCheck,
-  LayoutDashboard
+  LayoutDashboard,
+  Download
 } from 'lucide-react';
 import { User, GalleryPost, NewsAnnouncement, Inquiry, BusinessServiceItem, FuelPrice } from '@/lib/types';
 import { businessesData } from '@/app/components/BusinessesSection';
 import MembershipApplicationsTab from '@/app/components/admin/MembershipApplicationsTab';
 import AdminDashboardOverview from '@/app/components/admin/AdminDashboardOverview';
 import BusinessManagementTab from '@/app/components/admin/BusinessManagementTab';
+import BoardManagementTab from '@/app/components/admin/BoardManagementTab';
+import AdminManagementTab from '@/app/components/admin/AdminManagementTab';
 
 const BUSINESS_CATEGORIES = [
   { key: 'rural-bank', titleEn: 'Rural Bank', titleSi: 'ග්‍රාමීය බැංකුව' },
@@ -81,9 +84,12 @@ export default function AdminDashboardPage() {
   const locale = useLocale();
   const router = useRouter();
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'applications' | 'metrics' | 'news' | 'gallery' | 'messages' | 'services' | 'fuel' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'admins' | 'applications' | 'metrics' | 'board' | 'news' | 'gallery' | 'messages' | 'services' | 'fuel' | 'settings'>('dashboard');
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [appsTotalCount, setAppsTotalCount] = useState(0);
   const [appsPendingCount, setAppsPendingCount] = useState(0);
+  const [boardCount, setBoardCount] = useState(0);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [users, setUsers] = useState<User[]>([]);
@@ -209,7 +215,7 @@ export default function AdminDashboardPage() {
   const [editFullName, setEditFullName] = useState('');
   const [editNic, setEditNic] = useState('');
   const [editPhone, setEditPhone] = useState('');
-  const [editRole, setEditRole] = useState<'user' | 'admin'>('user');
+  const [editRole, setEditRole] = useState<'user' | 'admin' | 'superadmin'>('user');
   const [editPassword, setEditPassword] = useState('');
   const [isSavingUser, setIsSavingUser] = useState(false);
   const [userError, setUserError] = useState('');
@@ -314,15 +320,32 @@ export default function AdminDashboardPage() {
     }
   }, []);
 
-  // Check admin session
+  // Check admin session — also enforces tab-scope via sessionStorage
   const verifyAdmin = useCallback(async () => {
+    // If no active session flag for this tab, force re-login
+    if (typeof window !== 'undefined' && !sessionStorage.getItem('mpcs_active_session')) {
+      // Clear any lingering server cookie too
+      await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'logout' })
+      }).catch(() => {});
+      router.push(`/${locale}/login`);
+      return;
+    }
     try {
-      const res = await fetch('/api/auth');
+      const res = await fetch('/api/auth', { headers: { 'Cache-Control': 'no-cache' } });
       const data = await res.json();
       if (!data.isAuthenticated || !data.isAdmin) {
+        if (typeof window !== 'undefined') {
+          sessionStorage.removeItem('mpcs_active_session');
+          sessionStorage.removeItem('mpcs_active_user');
+        }
         router.push(`/${locale}/login`);
         return;
       }
+      setCurrentUser(data.user);
+      setIsSuperAdmin(Boolean(data.isSuperAdmin || data.user?.role === 'superadmin'));
       loadAdminData();
     } catch {
       router.push(`/${locale}/login`);
@@ -331,6 +354,14 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     verifyAdmin();
+    // Re-verify on bfcache restoration (back button after logout)
+    if (typeof window !== 'undefined') {
+      const handlePageShow = (e: PageTransitionEvent) => {
+        if (e.persisted) verifyAdmin();
+      };
+      window.addEventListener('pageshow', handlePageShow);
+      return () => window.removeEventListener('pageshow', handlePageShow);
+    }
   }, [verifyAdmin]);
 
   const handleLogout = async () => {
@@ -339,6 +370,11 @@ export default function AdminDashboardPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'logout' })
     });
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('mpcs_active_session');
+      sessionStorage.removeItem('mpcs_active_user');
+      sessionStorage.clear();
+    }
     router.push(`/${locale}/login`);
     router.refresh();
   };
@@ -629,6 +665,27 @@ export default function AdminDashboardPage() {
     } finally {
       setIsUploadingVoters(false);
     }
+  };
+
+  // Download Sample CSV Template in required format: Member Number, NIC, FULL NAME, ADDRESS, POSTAL ADDRESS, GENDER
+  const downloadCsvTemplate = (type: 'member' | 'voter') => {
+    const filename = type === 'member' ? 'panduwasnuwara_members_template.csv' : 'panduwasnuwara_voters_template.csv';
+    const csvContent = 
+`Member Number,NIC,FULL NAME,ADDRESS,POSTAL ADDRESS,GENDER
+MEM-001,198512345678,A. M. Sunil Shantha,"No. 12, Temple Road, Panduwasnuwara","P.O. Box 04, Panduwasnuwara",Male
+MEM-002,199087654321,K. D. Nimali Kumari,"No. 45, Kurunegala Road, Hettipola","P.O. Box 11, Hettipola",Female
+MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Station Road, Panduwasnuwara",Male
+`;
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   // Filtered users for search
@@ -1237,13 +1294,13 @@ export default function AdminDashboardPage() {
 
       {/* SIDEBAR */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 lg:w-72 bg-white border-r border-neutral-200/90 flex flex-col justify-between p-5 transition-transform duration-200 ease-in-out md:static md:translate-x-0 md:h-screen md:sticky md:top-0 shrink-0 shadow-xs ${
+        className={`fixed inset-y-0 left-0 z-50 w-72 lg:w-80 bg-white border-r border-neutral-200/90 flex flex-col p-4 sm:p-5 transition-transform duration-200 ease-in-out md:static md:translate-x-0 md:h-screen md:sticky md:top-0 shrink-0 shadow-xs ${
           isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="space-y-6">
+        <div className="flex flex-col h-full overflow-hidden">
           {/* Brand Header */}
-          <div className="flex items-center justify-between pb-4 border-b border-neutral-100">
+          <div className="flex items-center justify-between pb-4 border-b border-neutral-100 shrink-0">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full overflow-hidden border border-neutral-200 bg-white flex items-center justify-center shrink-0">
                 <Image
@@ -1272,7 +1329,7 @@ export default function AdminDashboardPage() {
           </div>
 
           {/* Navigation Links */}
-          <div className="space-y-1">
+          <div className="flex-1 overflow-y-auto pt-4 space-y-1 pr-1">
             <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider px-3 mb-2">
               {t('navigation')}
             </p>
@@ -1285,15 +1342,14 @@ export default function AdminDashboardPage() {
               }}
               className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 activeTab === 'dashboard'
-                  ? 'bg-neutral-900 text-white shadow-xs'
-                  : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+                  ? 'bg-[#003399] text-white shadow-xs'
+                  : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900'
               }`}
             >
-              <div className="flex items-center gap-2.5">
-                <LayoutDashboard className="w-4 h-4 text-[#003399]" />
-                <span>{locale === 'si' ? 'දළ විශ්ලේෂණය' : 'Dashboard'}</span>
+              <div className="flex items-center gap-2.5 min-w-0">
+                <LayoutDashboard className={`w-4 h-4 shrink-0 ${activeTab === 'dashboard' ? 'text-white' : 'text-[#003399]'}`} />
+                <span className="whitespace-nowrap">{locale === 'si' ? 'දළ විශ්ලේෂණය' : 'Dashboard'}</span>
               </div>
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             </button>
 
             <button
@@ -1303,22 +1359,47 @@ export default function AdminDashboardPage() {
               }}
               className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 activeTab === 'users'
-                  ? 'bg-neutral-900 text-white shadow-xs'
-                  : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+                  ? 'bg-[#003399] text-white shadow-xs'
+                  : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900'
               }`}
             >
-              <div className="flex items-center gap-2.5">
-                <Users className="w-4 h-4" />
-                <span>{t('usersTab')}</span>
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Users className={`w-4 h-4 shrink-0 ${activeTab === 'users' ? 'text-white' : 'text-[#003399]'}`} />
+                <span className="whitespace-nowrap">{t('usersTab')}</span>
               </div>
               <span
                 className={`text-[11px] font-mono px-1.5 py-0.5 rounded ${
-                  activeTab === 'users' ? 'bg-neutral-800 text-neutral-200' : 'bg-neutral-100 text-neutral-500'
+                  activeTab === 'users' ? 'bg-[#002266] text-white' : 'bg-neutral-100 text-neutral-600'
                 }`}
               >
                 {users.length}
               </span>
             </button>
+
+            {/* Super Admin Tab: Administrators */}
+            {isSuperAdmin && (
+              <button
+                onClick={() => {
+                  setActiveTab('admins');
+                  setIsMobileSidebarOpen(false);
+                }}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                  activeTab === 'admins'
+                    ? 'bg-[#003399] text-white shadow-xs'
+                    : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900'
+                }`}
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <ShieldCheck className={`w-4 h-4 shrink-0 ${activeTab === 'admins' ? 'text-white' : 'text-[#003399]'}`} />
+                  <span className="whitespace-nowrap">{locale === 'si' ? 'පරිපාලකවරුන්' : 'Administrators'}</span>
+                </div>
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border shrink-0 ${
+                  activeTab === 'admins' ? 'bg-[#002266] text-white border-blue-400/40' : 'bg-slate-100 text-[#003399] border-slate-200'
+                }`}>
+                  SUPER
+                </span>
+              </button>
+            )}
 
             {/* Membership Applications Tab */}
             <button
@@ -1328,21 +1409,25 @@ export default function AdminDashboardPage() {
               }}
               className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 activeTab === 'applications'
-                  ? 'bg-neutral-900 text-white shadow-xs'
-                  : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+                  ? 'bg-[#003399] text-white shadow-xs'
+                  : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900'
               }`}
             >
-              <div className="flex items-center gap-2.5">
-                <FileCheck className="w-4 h-4 text-[#003399]" />
-                <span>{locale === 'si' ? 'සාමාජික අයදුම්පත්' : 'Membership Applications'}</span>
+              <div className="flex items-center gap-2.5 min-w-0">
+                <FileCheck className={`w-4 h-4 shrink-0 ${activeTab === 'applications' ? 'text-white' : 'text-[#003399]'}`} />
+                <span className="whitespace-nowrap">{locale === 'si' ? 'සාමාජික අයදුම්පත්' : 'Membership Applications'}</span>
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 shrink-0">
                 {appsPendingCount > 0 && (
-                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                  <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
+                    activeTab === 'applications' ? 'bg-amber-400 text-slate-950 font-bold' : 'bg-amber-100 text-amber-900 border border-amber-200'
+                  }`}>
+                    {appsPendingCount}
+                  </span>
                 )}
                 <span
                   className={`text-[11px] font-mono px-1.5 py-0.5 rounded ${
-                    activeTab === 'applications' ? 'bg-neutral-800 text-neutral-200' : 'bg-neutral-100 text-neutral-500'
+                    activeTab === 'applications' ? 'bg-[#002266] text-white' : 'bg-neutral-100 text-neutral-600'
                   }`}
                 >
                   {appsTotalCount}
@@ -1357,14 +1442,41 @@ export default function AdminDashboardPage() {
               }}
               className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 activeTab === 'metrics'
-                  ? 'bg-neutral-900 text-white shadow-xs'
-                  : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+                  ? 'bg-[#003399] text-white shadow-xs'
+                  : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900'
               }`}
             >
-              <div className="flex items-center gap-2.5">
-                <BarChart3 className="w-4 h-4" />
-                <span>{t('metricsTab')}</span>
+              <div className="flex items-center gap-2.5 min-w-0">
+                <BarChart3 className={`w-4 h-4 shrink-0 ${activeTab === 'metrics' ? 'text-white' : 'text-[#003399]'}`} />
+                <span className="whitespace-nowrap">{t('metricsTab')}</span>
               </div>
+            </button>
+
+            {/* Board of Directors Management Tab */}
+            <button
+              onClick={() => {
+                setActiveTab('board');
+                setIsMobileSidebarOpen(false);
+              }}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                activeTab === 'board'
+                  ? 'bg-[#003399] text-white shadow-xs'
+                  : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900'
+              }`}
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <ShieldCheck className={`w-4 h-4 shrink-0 ${activeTab === 'board' ? 'text-white' : 'text-[#003399]'}`} />
+                <span className="whitespace-nowrap">{locale === 'si' ? 'අධ්‍යක්ෂ මණ්ඩලය' : 'Board of Directors'}</span>
+              </div>
+              {boardCount > 0 && (
+                <span
+                  className={`text-[11px] font-mono px-1.5 py-0.5 rounded shrink-0 ${
+                    activeTab === 'board' ? 'bg-[#002266] text-white' : 'bg-neutral-100 text-neutral-600'
+                  }`}
+                >
+                  {boardCount}
+                </span>
+              )}
             </button>
 
             <button
@@ -1374,17 +1486,17 @@ export default function AdminDashboardPage() {
               }}
               className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 activeTab === 'news'
-                  ? 'bg-neutral-900 text-white shadow-xs'
-                  : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+                  ? 'bg-[#003399] text-white shadow-xs'
+                  : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900'
               }`}
             >
-              <div className="flex items-center gap-2.5">
-                <Newspaper className="w-4 h-4" />
-                <span>{t('newsTab')}</span>
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Newspaper className={`w-4 h-4 shrink-0 ${activeTab === 'news' ? 'text-white' : 'text-[#003399]'}`} />
+                <span className="whitespace-nowrap">{t('newsTab')}</span>
               </div>
               <span
-                className={`text-[11px] font-mono px-1.5 py-0.5 rounded ${
-                  activeTab === 'news' ? 'bg-neutral-800 text-neutral-200' : 'bg-neutral-100 text-neutral-500'
+                className={`text-[11px] font-mono px-1.5 py-0.5 rounded shrink-0 ${
+                  activeTab === 'news' ? 'bg-[#002266] text-white' : 'bg-neutral-100 text-neutral-600'
                 }`}
               >
                 {newsList.length}
@@ -1398,17 +1510,17 @@ export default function AdminDashboardPage() {
               }}
               className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 activeTab === 'gallery'
-                  ? 'bg-neutral-900 text-white shadow-xs'
-                  : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+                  ? 'bg-[#003399] text-white shadow-xs'
+                  : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900'
               }`}
             >
-              <div className="flex items-center gap-2.5">
-                <ImageIcon className="w-4 h-4" />
-                <span>{t('galleryTab')}</span>
+              <div className="flex items-center gap-2.5 min-w-0">
+                <ImageIcon className={`w-4 h-4 shrink-0 ${activeTab === 'gallery' ? 'text-white' : 'text-[#003399]'}`} />
+                <span className="whitespace-nowrap">{t('galleryTab')}</span>
               </div>
               <span
-                className={`text-[11px] font-mono px-1.5 py-0.5 rounded ${
-                  activeTab === 'gallery' ? 'bg-neutral-800 text-neutral-200' : 'bg-neutral-100 text-neutral-500'
+                className={`text-[11px] font-mono px-1.5 py-0.5 rounded shrink-0 ${
+                  activeTab === 'gallery' ? 'bg-[#002266] text-white' : 'bg-neutral-100 text-neutral-600'
                 }`}
               >
                 {galleryPosts.length}
@@ -1422,21 +1534,25 @@ export default function AdminDashboardPage() {
               }}
               className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 activeTab === 'messages'
-                  ? 'bg-neutral-900 text-white shadow-xs'
-                  : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+                  ? 'bg-[#003399] text-white shadow-xs'
+                  : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900'
               }`}
             >
-              <div className="flex items-center gap-2.5">
-                <MessageCircle className="w-4 h-4" />
-                <span>{t('messagesTab') || 'Messages & Inquiries'}</span>
+              <div className="flex items-center gap-2.5 min-w-0">
+                <MessageCircle className={`w-4 h-4 shrink-0 ${activeTab === 'messages' ? 'text-white' : 'text-[#003399]'}`} />
+                <span className="whitespace-nowrap">{t('messagesTab') || 'Messages & Inquiries'}</span>
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 shrink-0">
                 {inquiries.filter(i => i.status === 'unread').length > 0 && (
-                  <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                  <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
+                    activeTab === 'messages' ? 'bg-rose-400 text-slate-950' : 'bg-rose-100 text-rose-800 border border-rose-200'
+                  }`}>
+                    {inquiries.filter(i => i.status === 'unread').length}
+                  </span>
                 )}
                 <span
                   className={`text-[11px] font-mono px-1.5 py-0.5 rounded ${
-                    activeTab === 'messages' ? 'bg-neutral-800 text-neutral-200' : 'bg-neutral-100 text-neutral-500'
+                    activeTab === 'messages' ? 'bg-[#002266] text-white' : 'bg-neutral-100 text-neutral-600'
                   }`}
                 >
                   {inquiries.length}
@@ -1451,13 +1567,13 @@ export default function AdminDashboardPage() {
               }}
               className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 activeTab === 'services'
-                  ? 'bg-neutral-900 text-white shadow-xs'
-                  : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+                  ? 'bg-[#003399] text-white shadow-xs'
+                  : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900'
               }`}
             >
-              <div className="flex items-center gap-2.5">
-                <Briefcase className="w-4 h-4 text-[#003399]" />
-                <span>{locale === 'si' ? 'ව්‍යාපාර සහ සේවාවන්' : 'Businesses & Services'}</span>
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Briefcase className={`w-4 h-4 shrink-0 ${activeTab === 'services' ? 'text-white' : 'text-[#003399]'}`} />
+                <span className="whitespace-nowrap">{locale === 'si' ? 'ව්‍යාපාර සහ සේවාවන්' : 'Businesses & Services'}</span>
               </div>
             </button>
 
@@ -1468,12 +1584,12 @@ export default function AdminDashboardPage() {
               }}
               className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 activeTab === 'fuel'
-                  ? 'bg-neutral-900 text-white shadow-xs'
-                  : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+                  ? 'bg-[#003399] text-white shadow-xs'
+                  : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900'
               }`}
             >
-              <Fuel className="w-4 h-4 text-amber-500" />
-              <span>{locale === 'si' ? 'ඉන්ධන මිල ගණන්' : 'Fuel Prices'}</span>
+              <Fuel className={`w-4 h-4 shrink-0 ${activeTab === 'fuel' ? 'text-white' : 'text-[#003399]'}`} />
+              <span className="whitespace-nowrap">{locale === 'si' ? 'ඉන්ධන මිල ගණන්' : 'Fuel Prices'}</span>
             </button>
 
             <button
@@ -1483,89 +1599,102 @@ export default function AdminDashboardPage() {
               }}
               className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 activeTab === 'settings'
-                  ? 'bg-neutral-900 text-white shadow-xs'
-                  : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+                  ? 'bg-[#003399] text-white shadow-xs'
+                  : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900'
               }`}
             >
-              <SettingsIcon className="w-4 h-4" />
-              <span>{t('settingsTab')}</span>
+              <SettingsIcon className={`w-4 h-4 shrink-0 ${activeTab === 'settings' ? 'text-white' : 'text-[#003399]'}`} />
+              <span className="whitespace-nowrap">{t('settingsTab')}</span>
             </button>
           </div>
-
-          {/* Quick Website Toggle Section */}
-          <div className="pt-4 border-t border-neutral-100 space-y-2">
-            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider px-3">
-              {locale === 'si' ? 'වෙබ් අඩවිය' : 'Live Website'}
-            </p>
-            <Link
-              href={`/${locale}`}
-              className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-neutral-200 hover:border-neutral-300 bg-white hover:bg-neutral-50 text-neutral-700 text-xs font-medium transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <Globe className="w-4 h-4 text-neutral-500" />
-                <span>{t('switchToWebsite')}</span>
-              </div>
-              <ArrowRight className="w-3.5 h-3.5 text-neutral-400" />
-            </Link>
-          </div>
-        </div>
-
-        {/* Sidebar Bottom (User identity & Log out) */}
-        <div className="pt-4 border-t border-neutral-100 space-y-3">
-          <div className="flex items-center gap-3 px-1">
-            <div className="w-8 h-8 rounded-full bg-neutral-100 border border-neutral-200 flex items-center justify-center text-neutral-700 font-bold text-xs">
-              AD
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold text-neutral-900 truncate">Administrator</p>
-              <p className="text-[10px] text-neutral-400 font-mono">admin</p>
-            </div>
-          </div>
-
-          <button
-            onClick={handleLogout}
-            className="w-full py-2 px-3 rounded-lg border border-neutral-200 hover:bg-rose-50 hover:border-rose-200 hover:text-rose-700 text-neutral-600 text-xs font-medium flex items-center justify-center gap-2 transition-colors cursor-pointer"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            <span>Log Out</span>
-          </button>
         </div>
       </aside>
 
       {/* MAIN CONTENT AREA */}
       <main className="flex-1 min-w-0 flex flex-col">
         {/* Main Content Sticky Header */}
-        <header className="bg-white border-b border-neutral-200/90 px-6 py-4 flex items-center justify-between sticky top-0 z-20 shadow-2xs">
-          <div>
-            <h1 className="font-condensed text-xl font-bold text-neutral-900 leading-tight">
-              {activeTab === 'dashboard' && (locale === 'si' ? 'පාලන පුවරුව සහ දළ විශ්ලේෂණය' : 'Dashboard Overview')}
-              {activeTab === 'users' && t('usersTab')}
-              {activeTab === 'applications' && (locale === 'si' ? 'සාමාජිකත්ව අයදුම්පත් කළමනාකරණය' : 'Membership Applications Management')}
-              {activeTab === 'metrics' && t('metricsTab')}
-              {activeTab === 'news' && t('newsTab')}
-              {activeTab === 'gallery' && t('galleryTab')}
-              {activeTab === 'messages' && (t('messagesTab') || 'Messages & Inquiries')}
-              {activeTab === 'services' && (locale === 'si' ? 'ව්‍යාපාර සහ සේවා කළමනාකරණය' : 'Businesses & Services Management')}
-              {activeTab === 'fuel' && (locale === 'si' ? 'ඉන්ධන සිල්ලර මිල කළමනාකරණය' : 'Fuel Price Management')}
-              {activeTab === 'settings' && t('settingsTab')}
-            </h1>
-            <p className="text-xs text-neutral-500">
-              {activeTab === 'dashboard'
-                ? (locale === 'si' ? 'වෙබ් අඩවි ක්‍රියාකාරකම්, සාමාජිකයින්, අයදුම්පත් සහ පාරිභෝගික විමසීම් සජීවීව නිරීක්ෂණය කරන්න' : 'Real-time monitoring of website activity, members, applications, and customer inquiries')
-                : activeTab === 'applications' 
-                  ? (locale === 'si' ? 'අන්තර්ජාලය හරහා ඉදිරිපත් කළ සාමාජික අයදුම්පත් පරීක්ෂා කිරීම, අනුමත කිරීම, සංස්කරණය හා මකා දැමීම' : 'Review, approve, edit, and manage member registration submissions and certified forms')
-                  : t('subtitle')}
-            </p>
+        <header className="bg-white border-b border-neutral-200/90 px-4 sm:px-6 py-3.5 flex items-center justify-between sticky top-0 z-20 shadow-2xs gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            {/* Mobile Hamburger Button */}
+            <button
+              onClick={() => setIsMobileSidebarOpen(true)}
+              className="md:hidden p-2 rounded-lg text-neutral-600 hover:bg-slate-100 border border-neutral-200 cursor-pointer shrink-0"
+              aria-label="Open Navigation"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <div className="min-w-0">
+              <h1 className="font-condensed text-xl font-bold text-neutral-900 leading-tight truncate">
+                {activeTab === 'dashboard' && (locale === 'si' ? 'පාලන පුවරුව සහ දළ විශ්ලේෂණය' : 'Dashboard Overview')}
+                {activeTab === 'users' && t('usersTab')}
+                {activeTab === 'admins' && (locale === 'si' ? 'පරිපාලක ගිණුම් කළමනාකරණය' : 'Administrator Accounts Management')}
+                {activeTab === 'applications' && (locale === 'si' ? 'සාමාජිකත්ව අයදුම්පත් කළමනාකරණය' : 'Membership Applications Management')}
+                {activeTab === 'metrics' && t('metricsTab')}
+                {activeTab === 'board' && (locale === 'si' ? 'අධ්‍යක්ෂ මණ්ඩල කළමනාකරණය' : 'Board of Directors Management')}
+                {activeTab === 'news' && t('newsTab')}
+                {activeTab === 'gallery' && t('galleryTab')}
+                {activeTab === 'messages' && (t('messagesTab') || 'Messages & Inquiries')}
+                {activeTab === 'services' && (locale === 'si' ? 'ව්‍යාපාර සහ සේවා කළමනාකරණය' : 'Businesses & Services Management')}
+                {activeTab === 'fuel' && (locale === 'si' ? 'ඉන්ධන සිල්ලර මිල කළමනාකරණය' : 'Fuel Price Management')}
+                {activeTab === 'settings' && t('settingsTab')}
+              </h1>
+              <p className="text-xs text-neutral-500 truncate hidden sm:block">
+                {activeTab === 'dashboard'
+                  ? (locale === 'si' ? 'වෙබ් අඩවි ක්‍රියාකාරකම්, සාමාජිකයින්, අයදුම්පත් සහ පාරිභෝගික විමසීම් සජීවීව නිරීක්ෂණය කරන්න' : 'Real-time monitoring of website activity, members, applications, and customer inquiries')
+                  : activeTab === 'admins'
+                    ? (locale === 'si' ? 'පද්ධති පරිපාලකයින්ගේ ප්‍රවේශ අයිතීන්, මුරපද සහ නව පරිපාලක ගිණුම් කළමනාකරණය' : 'Manage system administrator privileges, credentials, and access roles')
+                  : activeTab === 'applications' 
+                    ? (locale === 'si' ? 'අන්තර්ජාලය හරහා ඉදිරිපත් කළ සාමාජික අයදුම්පත් පරීක්ෂා කිරීම, අනුමත කිරීම, සංස්කරණය හා මකා දැමීම' : 'Review, approve, edit, and manage member registration submissions and certified forms')
+                    : activeTab === 'board'
+                      ? (locale === 'si' ? 'අධ්‍යක්ෂ මණ්ඩල සාමාජිකයින්ගේ විස්තර, ඡායාරූප, නිලතල සහ අනුපිළිවෙළ යාවත්කාලීන කරන්න' : 'Add, edit, reorder, and manage Board of Directors profiles, photos, and designations')
+                      : t('subtitle')}
+              </p>
+            </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          {/* Top Navbar Actions (Live Website, User Identity & Log Out) */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {/* Live Website Link */}
             <Link
               href={`/${locale}`}
-              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-neutral-200 text-neutral-700 hover:text-[#003399] text-xs font-bold transition-all shadow-2xs"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-50 hover:bg-slate-100 border border-neutral-200 text-neutral-700 hover:text-[#003399] text-xs font-semibold transition-colors shadow-2xs"
+              title={locale === 'si' ? 'මුල් පිටුව වෙත යන්න' : 'Visit Live Website'}
             >
               <Globe className="w-3.5 h-3.5 text-[#003399]" />
-              <span className="hidden sm:inline">{t('viewWebsite')}</span>
+              <span className="hidden md:inline">{locale === 'si' ? 'වෙබ් අඩවිය' : 'Live Website'}</span>
             </Link>
+
+            {/* Administrator Profile Pill */}
+            <div className="hidden lg:flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-slate-50 border border-neutral-200">
+              <div className={`w-7 h-7 rounded-md border flex items-center justify-center font-bold text-[11px] shrink-0 ${
+                isSuperAdmin 
+                  ? 'bg-slate-900 border-slate-800 text-amber-400' 
+                  : 'bg-white border-slate-200 text-[#003399]'
+              }`}>
+                {isSuperAdmin ? 'SA' : 'AD'}
+              </div>
+              <div className="text-left">
+                <div className="flex items-center gap-1.5">
+                  <p className="text-xs font-bold text-neutral-900 leading-tight max-w-[130px] truncate">
+                    {currentUser?.fullName || (isSuperAdmin ? 'Super Administrator' : 'Administrator')}
+                  </p>
+                  {isSuperAdmin && (
+                    <span className="text-[9px] font-bold px-1 rounded bg-slate-200 text-slate-800 font-mono">SUPER</span>
+                  )}
+                </div>
+                <p className="text-[10px] text-neutral-400 font-mono leading-tight">{currentUser?.username || 'admin'}</p>
+              </div>
+            </div>
+
+            {/* Log Out Button */}
+            <button
+              onClick={handleLogout}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-semibold transition-colors cursor-pointer"
+              title="Log Out"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Log Out</span>
+            </button>
           </div>
         </header>
 
@@ -1588,6 +1717,11 @@ export default function AdminDashboardPage() {
               setAppsPendingCount(pending);
             }}
           />
+        )}
+
+        {/* TAB: SUPER ADMIN - ADMINISTRATORS */}
+        {activeTab === 'admins' && isSuperAdmin && (
+          <AdminManagementTab currentUsername={currentUser?.username} />
         )}
 
         {/* TAB 1: USERS MANAGEMENT */}
@@ -1841,11 +1975,25 @@ export default function AdminDashboardPage() {
                   </form>
                 </div>
 
-                {/* Helper Schema Snippet */}
-                <div className="pt-3 border-t border-neutral-100 mt-4 text-[11px] text-neutral-400 font-mono space-y-1 bg-slate-50/70 p-3 rounded-xl border border-neutral-100">
-                  <p className="font-bold text-neutral-600 font-sans">{locale === 'si' ? 'අනුමත තීරු පිළිවෙළ:' : 'Expected Columns Format:'}</p>
-                  <p className="text-neutral-600">Member_Number, Full_Name, NIC, Phone</p>
-                  <p className="text-neutral-400 text-[10px] font-sans">{locale === 'si' ? 'හෝ නම සහ හැඳුනුම්පත් අංකය සහිත ඕනෑම CSV ගොනුවක්.' : 'Header row is automatically detected.'}</p>
+                {/* Helper Schema Snippet & Template Download */}
+                <div className="pt-3 border-t border-neutral-100 mt-4 text-[11px] text-neutral-400 font-mono space-y-2 bg-slate-50/70 p-3.5 rounded-xl border border-neutral-100">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-bold text-neutral-700 font-sans">{locale === 'si' ? 'අනුමත තීරු පිළිවෙළ:' : 'Expected Columns Format:'}</p>
+                    <button
+                      type="button"
+                      onClick={() => downloadCsvTemplate('member')}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-blue-200 text-[#003399] hover:bg-blue-50 text-[11px] font-sans font-bold shadow-2xs cursor-pointer transition-all"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>{locale === 'si' ? 'නියැදි CSV බාගන්න' : 'Download CSV Template'}</span>
+                    </button>
+                  </div>
+                  <p className="text-neutral-800 font-bold bg-white/80 p-1.5 rounded border border-neutral-200/60 overflow-x-auto text-[10.5px]">
+                    Member Number, NIC, FULL NAME, ADDRESS, POSTAL ADDRESS, GENDER
+                  </p>
+                  <p className="text-neutral-400 text-[10px] font-sans">
+                    {locale === 'si' ? 'සම්පූර්ණ තොරතුරු සහිත CSV ආකෘතිය භාවිතයෙන් පහසුවෙන්ම උඩුගත කරන්න.' : 'RFC-4180 standard CSV supported. Quotes around commas are handled automatically.'}
+                  </p>
                 </div>
               </div>
 
@@ -1931,16 +2079,35 @@ export default function AdminDashboardPage() {
                   </form>
                 </div>
 
-                {/* Helper Schema Snippet */}
-                <div className="pt-3 border-t border-neutral-100 mt-4 text-[11px] text-neutral-400 font-mono space-y-1 bg-slate-50/70 p-3 rounded-xl border border-neutral-100">
-                  <p className="font-bold text-neutral-600 font-sans">{locale === 'si' ? 'අනුමත තීරු පිළිවෙළ:' : 'Expected Columns Format:'}</p>
-                  <p className="text-neutral-600">Voter_Number, Full_Name, NIC, Polling_Division</p>
-                  <p className="text-neutral-400 text-[10px] font-sans">{locale === 'si' ? 'හෝ නම සහ හැඳුනුම්පත් අංකය සහිත ලැයිස්තුව.' : 'Verified voters count automatically syncs.'}</p>
+                {/* Helper Schema Snippet & Template Download */}
+                <div className="pt-3 border-t border-neutral-100 mt-4 text-[11px] text-neutral-400 font-mono space-y-2 bg-slate-50/70 p-3.5 rounded-xl border border-neutral-100">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-bold text-neutral-700 font-sans">{locale === 'si' ? 'අනුමත තීරු පිළිවෙළ:' : 'Expected Columns Format:'}</p>
+                    <button
+                      type="button"
+                      onClick={() => downloadCsvTemplate('voter')}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-emerald-200 text-emerald-800 hover:bg-emerald-50 text-[11px] font-sans font-bold shadow-2xs cursor-pointer transition-all"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>{locale === 'si' ? 'නියැදි CSV බාගන්න' : 'Download CSV Template'}</span>
+                    </button>
+                  </div>
+                  <p className="text-neutral-800 font-bold bg-white/80 p-1.5 rounded border border-neutral-200/60 overflow-x-auto text-[10.5px]">
+                    Member Number, NIC, FULL NAME, ADDRESS, POSTAL ADDRESS, GENDER
+                  </p>
+                  <p className="text-neutral-400 text-[10px] font-sans">
+                    {locale === 'si' ? 'ඡන්ද හිමි නාමලේඛන තොරතුරු සහිත CSV ගොනුව උඩුගත කරන්න.' : 'Verified voters count automatically syncs.'}
+                  </p>
                 </div>
               </div>
 
             </div>
           </div>
+        )}
+
+        {/* TAB: BOARD OF DIRECTORS MANAGEMENT */}
+        {activeTab === 'board' && (
+          <BoardManagementTab onCountChange={setBoardCount} />
         )}
 
         {/* TAB: NEWS & ANNOUNCEMENTS MANAGEMENT */}
@@ -2966,11 +3133,12 @@ export default function AdminDashboardPage() {
                 <label className="block text-xs font-bold text-neutral-700">{t('thRole')}</label>
                 <select
                   value={editRole}
-                  onChange={e => setEditRole(e.target.value as 'user' | 'admin')}
+                  onChange={e => setEditRole(e.target.value as 'user' | 'admin' | 'superadmin')}
                   className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-neutral-200 text-xs text-neutral-900 focus:outline-hidden focus:border-[#003399]"
                 >
                   <option value="user">{t('roleUser')}</option>
                   <option value="admin">{t('roleAdmin')}</option>
+                  {isSuperAdmin && <option value="superadmin">Super Administrator</option>}
                 </select>
               </div>
 

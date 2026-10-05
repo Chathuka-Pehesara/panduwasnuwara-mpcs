@@ -15,7 +15,6 @@ import {
   Phone,
   MapPin,
   UserCheck,
-  Sparkles,
   Layers,
   Search,
   RotateCw,
@@ -70,6 +69,9 @@ export default function BusinessManagementTab() {
   const [formManager, setFormManager] = useState('');
   const [formLocation, setFormLocation] = useState('');
   const [formHotline, setFormHotline] = useState('');
+  const [formManagers, setFormManagers] = useState<Array<{ branch: string; name: string; location: string; hotline: string }>>([
+    { branch: '', name: '', location: '', hotline: '' }
+  ]);
   const [formImageSrc, setFormImageSrc] = useState('/logo-photo.jpg');
   const [formCoverImage, setFormCoverImage] = useState('');
   const [formIsNew, setFormIsNew] = useState(false);
@@ -145,6 +147,9 @@ export default function BusinessManagementTab() {
     setFormManager('');
     setFormLocation('සමිති ගොඩනැගිල්ල, හැට්ටිපොල');
     setFormHotline('037 229 1012');
+    setFormManagers([
+      { branch: '', name: '', location: 'සමිති ගොඩනැගිල්ල, හැට්ටිපොල', hotline: '037 229 1012' }
+    ]);
     setFormImageSrc('/logo-photo.jpg');
     setFormCoverImage('');
     setFormIsNew(false);
@@ -171,6 +176,41 @@ export default function BusinessManagementTab() {
     setFormManager(b.manager || '');
     setFormLocation(b.location || '');
     setFormHotline(b.hotline || '');
+
+    if (b.key === 'consumer' && (!b.managers || b.managers.length <= 1)) {
+      setFormManagers([
+        {
+          branch: 'Sales Development Manager',
+          name: (b.managers && b.managers[0]?.name) || b.manager || 'එස් එම් රණසිංහ',
+          location: (b.managers && b.managers[0]?.location) || b.location || 'පාරිභෝගික අංශය, සමිති ගොඩනැගිල්ල, හැට්ටිපොල',
+          hotline: (b.managers && b.managers[0]?.hotline) || b.hotline || '037 229 1013'
+        },
+        {
+          branch: 'Store Manager',
+          name: (b.managers && b.managers[1]?.name) || '',
+          location: (b.managers && b.managers[1]?.location) || b.location || 'පාරිභෝගික අංශය, සමිති ගොඩනැගිල්ල, හැට්ටිපොල',
+          hotline: (b.managers && b.managers[1]?.hotline) || b.hotline || '037 229 1013'
+        }
+      ]);
+    } else if (b.managers && Array.isArray(b.managers) && b.managers.length > 0) {
+      setFormManagers(b.managers.map(m => ({
+        branch: m.branch || '',
+        name: m.name || '',
+        location: m.location || '',
+        hotline: m.hotline || ''
+      })));
+    } else if (b.manager || b.location || b.hotline) {
+      setFormManagers([
+        {
+          branch: '',
+          name: b.manager || '',
+          location: b.location || '',
+          hotline: b.hotline || ''
+        }
+      ]);
+    } else {
+      setFormManagers([{ branch: '', name: '', location: '', hotline: '' }]);
+    }
     setFormImageSrc(b.image_src || '/logo-photo.jpg');
     setFormCoverImage(b.cover_image || '');
     setFormIsNew(Boolean(b.is_new));
@@ -180,6 +220,34 @@ export default function BusinessManagementTab() {
     setUploadError('');
     setCoverUploadError('');
     setIsBusinessModalOpen(true);
+  };
+
+  // Add, Remove & Update Multiple Managers / Branch Banks
+  const handleAddManager = () => {
+    setFormManagers(prev => [
+      ...prev,
+      {
+        branch: '',
+        name: '',
+        location: prev.length > 0 && prev[prev.length - 1].location ? prev[prev.length - 1].location : '',
+        hotline: prev.length > 0 && prev[prev.length - 1].hotline ? prev[prev.length - 1].hotline : ''
+      }
+    ]);
+  };
+
+  const handleRemoveManager = (index: number) => {
+    setFormManagers(prev => {
+      if (prev.length <= 1) return [{ branch: '', name: '', location: '', hotline: '' }];
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
+  const handleUpdateManager = (index: number, field: 'branch' | 'name' | 'location' | 'hotline', value: string) => {
+    setFormManagers(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
   };
 
   // Upload Logo from Device
@@ -259,6 +327,17 @@ export default function BusinessManagementTab() {
     setBusinessError('');
 
     try {
+      const cleanManagers = formManagers
+        .map(m => ({
+          branch: m.branch.trim(),
+          name: m.name.trim(),
+          location: m.location.trim(),
+          hotline: m.hotline.trim()
+        }))
+        .filter(m => m.branch.length > 0 || m.name.length > 0 || m.location.length > 0 || m.hotline.length > 0);
+
+      const primaryManager = cleanManagers[0] || { branch: '', name: '', location: '', hotline: '' };
+
       const payload: any = {
         title_si: formTitleSi.trim(),
         title_en: formTitleEn.trim(),
@@ -268,9 +347,10 @@ export default function BusinessManagementTab() {
         category_en: formCategoryEn.trim() || null,
         description_si: formDescSi.trim() || null,
         description_en: formDescEn.trim() || null,
-        manager: formManager.trim() || null,
-        location: formLocation.trim() || null,
-        hotline: formHotline.trim() || null,
+        manager: primaryManager.name || primaryManager.branch || null,
+        location: primaryManager.location || null,
+        hotline: primaryManager.hotline || null,
+        managers: cleanManagers.length > 0 ? cleanManagers : undefined,
         image_src: formImageSrc.trim() || '/logo-photo.jpg',
         cover_image: formCoverImage.trim() || null,
         is_new: formIsNew,
@@ -982,45 +1062,156 @@ export default function BusinessManagementTab() {
                 </div>
               </div>
 
-              {/* Manager, Location, Hotline */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-neutral-800 mb-1">
-                    Manager Name & Designation
-                  </label>
-                  <input
-                    type="text"
-                    value={formManager}
-                    onChange={e => setFormManager(e.target.value)}
-                    placeholder="e.g. කේ ඩබ් ජදසිංහ (Manager)"
-                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-neutral-200 text-xs text-neutral-900 focus:bg-white focus:border-[#003399] focus:outline-hidden"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-neutral-800 mb-1">
-                    Location / Office Address
-                  </label>
-                  <input
-                    type="text"
-                    value={formLocation}
-                    onChange={e => setFormLocation(e.target.value)}
-                    placeholder="e.g. සමිති ගොඩනැගිල්ල, හැට්ටිපොල"
-                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-neutral-200 text-xs text-neutral-900 focus:bg-white focus:border-[#003399] focus:outline-hidden"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-neutral-800 mb-1">
-                    Hotline / Phone
-                  </label>
-                  <input
-                    type="text"
-                    value={formHotline}
-                    onChange={e => setFormHotline(e.target.value)}
-                    placeholder="e.g. 037 229 1012"
-                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-neutral-200 text-xs text-neutral-900 focus:bg-white focus:border-[#003399] focus:outline-hidden"
-                  />
-                </div>
-              </div>
+              {/* Managers & Branch Banks Section */}
+              {(() => {
+                const isRural = formKey === 'rural-bank' || formTitleEn.toLowerCase().includes('rural bank') || formTitleSi.includes('ග්‍රාමීය');
+                return (
+                  <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/80 border border-neutral-200/90 space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-neutral-200/70">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-blue-100/70 text-[#003399] flex items-center justify-center shrink-0">
+                          <Building2 className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-neutral-900 leading-tight">
+                            {isRural
+                              ? (locale === 'si' ? 'ග්‍රාමීය බැංකු ශාඛා සහ කළමනාකාරීත්වය' : 'Rural Bank Branches & Managers')
+                              : (locale === 'si' ? 'කළමනාකාරීත්වය සහ ශාඛා/අංශ' : 'Managers, Branches & Contact Persons')}
+                          </h4>
+                          <p className="text-[11px] text-neutral-500 mt-0.5">
+                            {isRural
+                              ? (locale === 'si' 
+                                  ? 'පඬුවස්නුවර ප්‍රාදේශීය ග්‍රාමීය බැංකු ශාඛා සියල්ල මෙහිදී කළමනාකරණය කරන්න. නව ශාඛා ඇතුළත් කිරීමට "Add Bank / Branch" ක්ලික් කරන්න.'
+                                  : 'Manage all branch banks and managers across Panduwasnuwara. Click "Add Bank / Branch" to add more.')
+                              : (locale === 'si' 
+                                  ? 'මෙම අංශය සඳහා කළමනාකරුවන් හෝ ශාඛා කිහිපයක් එක් කිරීමට "Add Manager" ක්ලික් කරන්න.'
+                                  : 'Add one or more branch locations or department managers for this business unit.')}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={handleAddManager}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#003399] hover:bg-[#002266] text-white text-xs font-bold shadow-xs cursor-pointer transition-all shrink-0"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>{isRural ? (locale === 'si' ? 'බැංකු ශාඛාවක් එක් කරන්න' : 'Add Bank / Branch') : (locale === 'si' ? 'කළමනාකරුවෙකු එක් කරන්න' : 'Add Manager')}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3 max-h-[460px] overflow-y-auto pr-1">
+                      {formManagers.map((mgr, index) => (
+                        <div
+                          key={index}
+                          className="p-3.5 rounded-xl bg-white border border-neutral-200 shadow-2xs space-y-2.5 transition-all"
+                        >
+                          <div className="flex items-center justify-between pb-2 border-b border-neutral-100">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500 font-mono flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-[#003399]" />
+                              {mgr.branch ? mgr.branch : (
+                                isRural 
+                                  ? (locale === 'si' ? `බැංකු ශාඛාව #${index + 1}` : `Branch Bank #${index + 1}`)
+                                  : (locale === 'si' ? `කළමනාකරු / ශාඛාව #${index + 1}` : `Manager / Branch #${index + 1}`)
+                              )}
+                            </span>
+                            {formManagers.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveManager(index)}
+                                className="inline-flex items-center gap-1 text-[11px] text-rose-500 hover:text-rose-700 hover:bg-rose-50 px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
+                                title={locale === 'si' ? 'ඉවත් කරන්න' : 'Remove'}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                <span>{locale === 'si' ? 'ඉවත් කරන්න' : 'Remove'}</span>
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+                            <div>
+                              <label 
+                                className="h-5 flex items-center text-xs font-bold text-neutral-800 mb-1.5 whitespace-nowrap truncate"
+                                title={isRural ? (locale === 'si' ? 'ශාඛාව / බැංකුවේ නම' : 'Branch / Bank Name') : (locale === 'si' ? 'තනතුර / කාර්යභාරය' : 'Designation / Role')}
+                              >
+                                {isRural ? (locale === 'si' ? 'ශාඛාව / බැංකුව' : 'Branch / Bank Name') : (locale === 'si' ? 'තනතුර / කාර්යභාරය' : 'Designation / Role')}
+                              </label>
+                              <input
+                                type="text"
+                                value={mgr.branch}
+                                onChange={e => handleUpdateManager(index, 'branch', e.target.value)}
+                                placeholder={isRural ? (locale === 'si' ? "උදා: හැට්ටිපොල ශාඛාව" : "e.g. Hettipola Branch") : (locale === 'si' ? "උදා: Store Manager" : "e.g. Store Manager")}
+                                className="w-full h-9 px-3 py-2 rounded-xl bg-slate-50 border border-neutral-200 text-xs text-neutral-900 focus:bg-white focus:border-[#003399] focus:outline-hidden transition-colors font-medium"
+                              />
+                            </div>
+                            <div>
+                              <label 
+                                className="h-5 flex items-center text-xs font-bold text-neutral-800 mb-1.5 whitespace-nowrap truncate"
+                                title={locale === 'si' ? 'කළමනාකරුගේ නම සහ තනතුර' : 'Manager Name & Designation'}
+                              >
+                                {locale === 'si' ? 'කළමනාකරු සහ තනතුර' : 'Manager & Designation'}
+                              </label>
+                              <input
+                                type="text"
+                                value={mgr.name}
+                                onChange={e => handleUpdateManager(index, 'name', e.target.value)}
+                                placeholder={locale === 'si' ? "උදා: කේ ඩබ් ජයසිංහ" : "e.g. K. W. Jayasinghe"}
+                                className="w-full h-9 px-3 py-2 rounded-xl bg-slate-50 border border-neutral-200 text-xs text-neutral-900 focus:bg-white focus:border-[#003399] focus:outline-hidden transition-colors"
+                              />
+                            </div>
+                            <div>
+                              <label 
+                                className="h-5 flex items-center text-xs font-bold text-neutral-800 mb-1.5 whitespace-nowrap truncate"
+                                title={locale === 'si' ? 'ස්ථානය / කාර්යාල ලිපිනය' : 'Location / Office Address'}
+                              >
+                                {locale === 'si' ? 'ස්ථානය / ලිපිනය' : 'Location / Address'}
+                              </label>
+                              <input
+                                type="text"
+                                value={mgr.location}
+                                onChange={e => handleUpdateManager(index, 'location', e.target.value)}
+                                placeholder={locale === 'si' ? "උදා: කුරුණෑගල පාර, හැට්ටිපොල" : "e.g. Kurunegala Rd, Hettipola"}
+                                className="w-full h-9 px-3 py-2 rounded-xl bg-slate-50 border border-neutral-200 text-xs text-neutral-900 focus:bg-white focus:border-[#003399] focus:outline-hidden transition-colors"
+                              />
+                            </div>
+                            <div>
+                              <label 
+                                className="h-5 flex items-center text-xs font-bold text-neutral-800 mb-1.5 whitespace-nowrap truncate"
+                                title={locale === 'si' ? 'ක්ෂණික ඇමතුම් / දුරකථන අංකය' : 'Hotline / Phone Number'}
+                              >
+                                {locale === 'si' ? 'ක්ෂණික ඇමතුම් / දුරකථන' : 'Hotline / Phone'}
+                              </label>
+                              <input
+                                type="text"
+                                value={mgr.hotline}
+                                onChange={e => handleUpdateManager(index, 'hotline', e.target.value)}
+                                placeholder="e.g. 037 229 1012"
+                                className="w-full h-9 px-3 py-2 rounded-xl bg-slate-50 border border-neutral-200 text-xs text-neutral-900 focus:bg-white focus:border-[#003399] focus:outline-hidden font-mono transition-colors"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="text-[11px] font-mono text-neutral-500 font-semibold">
+                        {formManagers.length} {isRural ? (locale === 'si' ? 'බැංකු ශාඛා ලියාපදිංචි කර ඇත' : 'Branches configured') : (locale === 'si' ? 'කළමනාකරුවන්' : 'Managers')}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleAddManager}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-[#003399] hover:bg-blue-50 transition-colors cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>{isRural ? (locale === 'si' ? 'තවත් බැංකු ශාඛාවක් එක් කරන්න' : 'Add Another Bank / Branch') : (locale === 'si' ? 'තවත් කළමනාකරුවෙකු එක් කරන්න' : 'Add Another Manager')}</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Logo Selection & Preview */}
               <div className="p-4 rounded-2xl bg-slate-50 border border-neutral-200 space-y-3">

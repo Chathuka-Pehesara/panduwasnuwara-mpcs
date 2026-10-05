@@ -34,26 +34,48 @@ export default function RuralBankPage() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [dynamicServices, setDynamicServices] = useState<BusinessServiceItem[]>([]);
+  const [branches, setBranches] = useState<RuralBankBranch[]>(ruralBankBranches);
 
   useEffect(() => {
     let isMounted = true;
-    async function fetchServices() {
+    async function fetchBankData() {
       try {
-        const res = await fetch('/api/admin/services?businessKey=rural-bank');
-        const data = await res.json();
-        if (isMounted && data.success && Array.isArray(data.services) && data.services.length > 0) {
-          setDynamicServices(data.services);
+        const [svcRes, bizRes] = await Promise.all([
+          fetch('/api/admin/services?businessKey=rural-bank'),
+          fetch('/api/businesses')
+        ]);
+        const [svcData, bizData] = await Promise.all([svcRes.json(), bizRes.json()]);
+
+        if (isMounted && svcData.success && Array.isArray(svcData.services) && svcData.services.length > 0) {
+          setDynamicServices(svcData.services);
+        }
+
+        if (isMounted && bizData.success && Array.isArray(bizData.businesses)) {
+          const rb = bizData.businesses.find((b: any) => b.key === 'rural-bank');
+          if (rb && Array.isArray(rb.managers) && rb.managers.length > 0) {
+            const mapped: RuralBankBranch[] = rb.managers.map((m: any, idx: number) => ({
+              id: idx + 1,
+              branchNameEn: m.branch || m.branchNameEn || `Branch ${idx + 1}`,
+              branchNameSi: m.branch || m.branchNameSi || `ශාඛාව ${idx + 1}`,
+              managerNameEn: m.name || m.managerNameEn || '',
+              managerNameSi: m.name || m.managerNameSi || '',
+              hotline: m.hotline || '',
+              addressEn: m.location || m.addressEn || '',
+              addressSi: m.location || m.addressSi || ''
+            }));
+            setBranches(mapped);
+          }
         }
       } catch (err) {
-        console.error('Error fetching bank services:', err);
+        console.error('Error fetching bank data:', err);
       }
     }
-    fetchServices();
+    fetchBankData();
     return () => { isMounted = false; };
   }, []);
 
-  // Filter 22 branches based on search query
-  const filteredBranches = ruralBankBranches.filter((branch: RuralBankBranch) => {
+  // Filter branches based on search query
+  const filteredBranches = branches.filter((branch: RuralBankBranch) => {
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     const branchName = (isSi ? branch.branchNameSi : branch.branchNameEn).toLowerCase();

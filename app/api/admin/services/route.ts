@@ -14,7 +14,7 @@ function getAuthFromToken(token?: string) {
     if (parts.length >= 3 && parts[0] === 'session') {
       const username = decodeURIComponent(parts[1]);
       const role = parts[2];
-      return { username, role, isAdmin: role === 'admin' };
+      return { username, role, isAdmin: role === 'admin' || role === 'superadmin' };
     }
   } catch (err) {
     console.error('Error parsing token:', err);

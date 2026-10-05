@@ -30,10 +30,24 @@ export const INITIAL_BUSINESSES = [
     categoryEn: 'Retail & Consumer',
     descriptionSi: 'බත් සහ පරිප්පු සිට සබන් සහ ලියන ද්‍රව්‍ය දක්වා — පාරිභෝගික අංශය සාධාරණ මිලට උසස් අත්‍යවශ්‍ය භාණ්ඩ සපයයි. සාමාජිකයින්ට වට්ටම් ක්‍රම සහ සමයට අනුව ප්‍රවර්ධන ලැබේ.',
     descriptionEn: 'From rice and dhal to soaps and stationery — the Consumer Section supplies quality essential goods at fair prices. Members enjoy special discount schemes and seasonal offers throughout the year.',
-    manager: 'එස් එම් රණසිංහ (Manager)',
+    manager: 'එස් එම් රණසිංහ',
     location: 'පාරිභෝගික අංශය, සමිති ගොඩනැගිල්ල, හැට්ටිපොල',
     hotline: '037 229 1013',
     imageSrc: '/images/sections/consumer.png',
+    managers: [
+      {
+        branch: 'Sales Development Manager',
+        name: 'එස් එම් රණසිංහ',
+        location: 'පාරිභෝගික අංශය, සමිති ගොඩනැගිල්ල, හැට්ටිපොල',
+        hotline: '037 229 1013'
+      },
+      {
+        branch: 'Store Manager',
+        name: '',
+        location: 'පාරිභෝගික අංශය, සමිති ගොඩනැගිල්ල, හැට්ටිපොල',
+        hotline: '037 229 1013'
+      }
+    ],
     isNew: false,
     displayOrder: 2,
     services: ['තොග හා සිල්ලර විකිණීම', 'සාමාජික වට්ටම් ක්‍රමය', 'උත්සව සමයේ ප්‍රවර්ධන', 'උත්සව සඳහා තොග ඇණවුම්', 'ගෙදර බාරගෙන යාමේ සේවය', 'සාධාරණ මිලේ අත්‍යවශ්‍ය භාණ්ඩ'],

@@ -7,7 +7,7 @@ function isAdmin(req: NextRequest): boolean {
   if (!token) return false;
   try {
     const parts = token.split('_');
-    return parts.length >= 3 && parts[2] === 'admin';
+    return parts.length >= 3 && (parts[2] === 'admin' || parts[2] === 'superadmin');
   } catch {
     return false;
   }
