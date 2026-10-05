@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { User, Phone, Mail, GraduationCap, Building2 } from 'lucide-react';
 
@@ -15,6 +15,8 @@ export interface BoardMember {
   email: string;
   address?: string;
   roleType: 'chairman' | 'vice_chairman' | 'director' | 'officer';
+  imageSrc?: string;
+  displayOrder?: number;
 }
 
 export const boardMembersData: BoardMember[] = [
@@ -125,11 +127,24 @@ interface BoardSectionProps {
   members?: BoardMember[];
 }
 
-export default function BoardSection({ members = boardMembersData }: BoardSectionProps) {
+export default function BoardSection({ members: initialMembers }: BoardSectionProps) {
   const t = useTranslations('Board');
   const locale = useLocale();
   const isSi = locale === 'si';
+  const [boardList, setBoardList] = useState<BoardMember[]>(initialMembers || boardMembersData);
 
+  useEffect(() => {
+    fetch('/api/board')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && Array.isArray(data.members) && data.members.length > 0) {
+          setBoardList(data.members);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const members = boardList;
   const chairman = members.find(m => m.roleType === 'chairman');
   const viceChairman = members.find(m => m.roleType === 'vice_chairman');
   const directors = members.filter(m => m.roleType === 'director');
@@ -142,9 +157,17 @@ export default function BoardSection({ members = boardMembersData }: BoardSectio
         className="group bg-white rounded-2xl sm:rounded-3xl border border-neutral-200/80 shadow-xs hover:shadow-md hover:border-neutral-300 hover:-translate-y-0.5 transition-all duration-300 pt-6 pb-5 px-5 flex flex-col justify-between overflow-hidden text-center relative"
       >
         <div className="flex flex-col items-center text-center w-full">
-          {/* Avatar Icon with Professional Neutral Gray Frame */}
-          <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-neutral-200/90 flex items-center justify-center mx-auto shrink-0 shadow-xs group-hover:border-neutral-300 group-hover:bg-slate-100/80 transition-all duration-300">
-            <User className="w-8 h-8 text-neutral-500 group-hover:text-neutral-800 transition-colors" />
+          {/* Avatar Icon / Custom Photo with Professional Frame */}
+          <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-neutral-200/90 flex items-center justify-center mx-auto shrink-0 shadow-xs group-hover:border-neutral-300 group-hover:bg-slate-100/80 transition-all duration-300 overflow-hidden">
+            {member.imageSrc ? (
+              <img
+                src={member.imageSrc}
+                alt={isSi ? member.nameSi : member.nameEn}
+                className="w-full h-full object-cover rounded-2xl"
+              />
+            ) : (
+              <User className="w-8 h-8 text-neutral-500 group-hover:text-neutral-800 transition-colors" />
+            )}
           </div>
 
           {/* Role Badge — locale-aware */}

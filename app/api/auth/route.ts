@@ -9,7 +9,9 @@ function getAuthFromToken(token?: string) {
     if (parts.length >= 3 && parts[0] === 'session') {
       const username = decodeURIComponent(parts[1]);
       const role = parts[2];
-      return { username, role, isAdmin: role === 'admin' };
+      const isAdmin = role === 'admin' || role === 'superadmin';
+      const isSuperAdmin = role === 'superadmin';
+      return { username, role, isAdmin, isSuperAdmin };
     }
   } catch (err) {
     console.error('Error parsing token:', err);
@@ -24,19 +26,24 @@ export async function GET(req: NextRequest) {
   const recoveryWhatsAppNumber = await getRecoveryWhatsAppNumber();
 
   if (!auth) {
-    return NextResponse.json({
+    const response = NextResponse.json({
       isAuthenticated: false,
       isAdmin: false,
       user: null,
       recoveryWhatsAppNumber
     });
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+    return response;
   }
 
   const user = await findUserByNicOrUsername(auth.username);
 
-  return NextResponse.json({
+  const response = NextResponse.json({
     isAuthenticated: true,
     isAdmin: auth.isAdmin,
+    isSuperAdmin: auth.isSuperAdmin,
     user: user ? {
       id: user.id,
       username: user.username,
@@ -55,6 +62,10 @@ export async function GET(req: NextRequest) {
     },
     recoveryWhatsAppNumber
   });
+  response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+  response.headers.set('Pragma', 'no-cache');
+  response.headers.set('Expires', '0');
+  return response;
 }
 
 export async function POST(req: NextRequest) {
@@ -67,6 +78,9 @@ export async function POST(req: NextRequest) {
       const response = NextResponse.json({ success: true, message: 'Logged out' });
       response.cookies.delete('mpcs_auth_token');
       response.cookies.delete('mpcs_admin_token');
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+      response.headers.set('Pragma', 'no-cache');
+      response.headers.set('Expires', '0');
       return response;
     }
 
@@ -142,7 +156,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Invalid NIC or password' }, { status: 401 });
     }
 
-    const isAdmin = foundUser.role === 'admin';
+    const isAdmin = foundUser.role === 'admin' || foundUser.role === 'superadmin';
+    const isSuperAdmin = foundUser.role === 'superadmin';
     const token = `session_${encodeURIComponent(foundUser.username)}_${foundUser.role}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
     const response = NextResponse.json({
@@ -155,10 +170,16 @@ export async function POST(req: NextRequest) {
         phone: foundUser.phone || '',
         email: foundUser.email || '',
         role: foundUser.role,
-        isAdmin
+        isAdmin,
+        isSuperAdmin
       }
     });
 
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+
+    // Strict session cookies (no maxAge/expires so they expire on tab/browser session close)
     if (isAdmin) {
       response.cookies.set({
         name: 'mpcs_admin_token',
@@ -166,8 +187,7 @@ export async function POST(req: NextRequest) {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        path: '/',
-        maxAge: 60 * 60 * 24 * 30
+        path: '/'
       });
       response.cookies.set({
         name: 'mpcs_auth_token',
@@ -175,8 +195,7 @@ export async function POST(req: NextRequest) {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        path: '/',
-        maxAge: 60 * 60 * 24 * 30
+        path: '/'
       });
     } else {
       response.cookies.delete('mpcs_admin_token');
@@ -186,8 +205,7 @@ export async function POST(req: NextRequest) {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        path: '/',
-        maxAge: 60 * 60 * 24 * 30
+        path: '/'
       });
     }
 

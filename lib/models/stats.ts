@@ -11,15 +11,22 @@ export interface LiveStats {
 
 export interface MemberRecord {
   memberNumber?: string;
-  fullName: string;
   nic?: string;
+  fullName: string;
+  address?: string;
+  postalAddress?: string;
+  gender?: string;
   phone?: string;
 }
 
 export interface VoterRecord {
   voterNumber?: string;
-  fullName: string;
+  memberNumber?: string;
   nic?: string;
+  fullName: string;
+  address?: string;
+  postalAddress?: string;
+  gender?: string;
   division?: string;
 }
 
@@ -94,8 +101,11 @@ export async function importMembers(
     .filter(r => r.fullName && r.fullName.trim().length > 0)
     .map(r => ({
       member_number: r.memberNumber?.trim() || null,
-      full_name: r.fullName.trim(),
       nic: r.nic?.trim().toUpperCase() || null,
+      full_name: r.fullName.trim(),
+      address: r.address?.trim() || null,
+      postal_address: r.postalAddress?.trim() || null,
+      gender: r.gender?.trim() || null,
       phone: r.phone?.trim() || null,
       imported_at: new Date().toISOString()
     }));
@@ -133,9 +143,13 @@ export async function uploadEligibleVoters(
   const validRows = records
     .filter(r => r.fullName && r.fullName.trim().length > 0)
     .map(r => ({
-      voter_number: r.voterNumber?.trim() || null,
-      full_name: r.fullName.trim(),
+      voter_number: (r.voterNumber || r.memberNumber)?.trim() || null,
+      member_number: (r.memberNumber || r.voterNumber)?.trim() || null,
       nic: r.nic?.trim().toUpperCase() || null,
+      full_name: r.fullName.trim(),
+      address: r.address?.trim() || null,
+      postal_address: r.postalAddress?.trim() || null,
+      gender: r.gender?.trim() || null,
       division: r.division?.trim() || null,
       uploaded_at: new Date().toISOString()
     }));
@@ -171,11 +185,11 @@ export async function getImportedMembersList(
 
   let query = supabase
     .from('imported_members')
-    .select('id, member_number, full_name, nic, phone, imported_at', { count: 'exact' });
+    .select('id, member_number, full_name, nic, address, postal_address, gender, phone, imported_at', { count: 'exact' });
 
   if (search && search.trim()) {
     const term = search.trim();
-    query = query.or(`full_name.ilike.%${term}%,nic.ilike.%${term}%,member_number.ilike.%${term}%`);
+    query = query.or(`full_name.ilike.%${term}%,nic.ilike.%${term}%,member_number.ilike.%${term}%,address.ilike.%${term}%`);
   }
 
   const { data, count, error } = await query
@@ -203,11 +217,11 @@ export async function getEligibleVotersList(
 
   let query = supabase
     .from('eligible_voters')
-    .select('id, voter_number, full_name, nic, division, uploaded_at', { count: 'exact' });
+    .select('id, voter_number, member_number, full_name, nic, address, postal_address, gender, division, uploaded_at', { count: 'exact' });
 
   if (search && search.trim()) {
     const term = search.trim();
-    query = query.or(`full_name.ilike.%${term}%,nic.ilike.%${term}%,voter_number.ilike.%${term}%,division.ilike.%${term}%`);
+    query = query.or(`full_name.ilike.%${term}%,nic.ilike.%${term}%,voter_number.ilike.%${term}%,member_number.ilike.%${term}%,address.ilike.%${term}%`);
   }
 
   const { data, count, error } = await query
