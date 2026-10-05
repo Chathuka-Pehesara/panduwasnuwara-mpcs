@@ -62,7 +62,7 @@ interface LatestMessage {
 }
 
 interface AdminDashboardOverviewProps {
-  onNavigateTab: (tab: 'users' | 'applications' | 'metrics' | 'news' | 'gallery' | 'messages' | 'services' | 'fuel' | 'settings', detailId?: any) => void;
+  onNavigateTab: (tab: 'users' | 'applications' | 'metrics' | 'board' | 'news' | 'gallery' | 'messages' | 'services' | 'fuel' | 'settings', detailId?: any) => void;
 }
 
 export default function AdminDashboardOverview({ onNavigateTab }: AdminDashboardOverviewProps) {

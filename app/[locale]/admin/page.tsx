@@ -46,13 +46,15 @@ import {
   RotateCcw,
   Sparkles,
   FileCheck,
-  LayoutDashboard
+  LayoutDashboard,
+  Download
 } from 'lucide-react';
 import { User, GalleryPost, NewsAnnouncement, Inquiry, BusinessServiceItem, FuelPrice } from '@/lib/types';
 import { businessesData } from '@/app/components/BusinessesSection';
 import MembershipApplicationsTab from '@/app/components/admin/MembershipApplicationsTab';
 import AdminDashboardOverview from '@/app/components/admin/AdminDashboardOverview';
 import BusinessManagementTab from '@/app/components/admin/BusinessManagementTab';
+import BoardManagementTab from '@/app/components/admin/BoardManagementTab';
 
 const BUSINESS_CATEGORIES = [
   { key: 'rural-bank', titleEn: 'Rural Bank', titleSi: 'ග්‍රාමීය බැංකුව' },
@@ -81,9 +83,10 @@ export default function AdminDashboardPage() {
   const locale = useLocale();
   const router = useRouter();
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'applications' | 'metrics' | 'news' | 'gallery' | 'messages' | 'services' | 'fuel' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'applications' | 'metrics' | 'board' | 'news' | 'gallery' | 'messages' | 'services' | 'fuel' | 'settings'>('dashboard');
   const [appsTotalCount, setAppsTotalCount] = useState(0);
   const [appsPendingCount, setAppsPendingCount] = useState(0);
+  const [boardCount, setBoardCount] = useState(0);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [users, setUsers] = useState<User[]>([]);
@@ -629,6 +632,27 @@ export default function AdminDashboardPage() {
     } finally {
       setIsUploadingVoters(false);
     }
+  };
+
+  // Download Sample CSV Template in required format: Member Number, NIC, FULL NAME, ADDRESS, POSTAL ADDRESS, GENDER
+  const downloadCsvTemplate = (type: 'member' | 'voter') => {
+    const filename = type === 'member' ? 'panduwasnuwara_members_template.csv' : 'panduwasnuwara_voters_template.csv';
+    const csvContent = 
+`Member Number,NIC,FULL NAME,ADDRESS,POSTAL ADDRESS,GENDER
+MEM-001,198512345678,A. M. Sunil Shantha,"No. 12, Temple Road, Panduwasnuwara","P.O. Box 04, Panduwasnuwara",Male
+MEM-002,199087654321,K. D. Nimali Kumari,"No. 45, Kurunegala Road, Hettipola","P.O. Box 11, Hettipola",Female
+MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Station Road, Panduwasnuwara",Male
+`;
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   // Filtered users for search
@@ -1367,6 +1391,33 @@ export default function AdminDashboardPage() {
               </div>
             </button>
 
+            {/* Board of Directors Management Tab */}
+            <button
+              onClick={() => {
+                setActiveTab('board');
+                setIsMobileSidebarOpen(false);
+              }}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                activeTab === 'board'
+                  ? 'bg-neutral-900 text-white shadow-xs'
+                  : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                <span>{locale === 'si' ? 'අධ්‍යක්ෂ මණ්ඩලය' : 'Board of Directors'}</span>
+              </div>
+              {boardCount > 0 && (
+                <span
+                  className={`text-[11px] font-mono px-1.5 py-0.5 rounded ${
+                    activeTab === 'board' ? 'bg-neutral-800 text-neutral-200' : 'bg-neutral-100 text-neutral-500'
+                  }`}
+                >
+                  {boardCount}
+                </span>
+              )}
+            </button>
+
             <button
               onClick={() => {
                 setActiveTab('news');
@@ -1542,6 +1593,7 @@ export default function AdminDashboardPage() {
               {activeTab === 'users' && t('usersTab')}
               {activeTab === 'applications' && (locale === 'si' ? 'සාමාජිකත්ව අයදුම්පත් කළමනාකරණය' : 'Membership Applications Management')}
               {activeTab === 'metrics' && t('metricsTab')}
+              {activeTab === 'board' && (locale === 'si' ? 'අධ්‍යක්ෂ මණ්ඩල කළමනාකරණය' : 'Board of Directors Management')}
               {activeTab === 'news' && t('newsTab')}
               {activeTab === 'gallery' && t('galleryTab')}
               {activeTab === 'messages' && (t('messagesTab') || 'Messages & Inquiries')}
@@ -1554,7 +1606,9 @@ export default function AdminDashboardPage() {
                 ? (locale === 'si' ? 'වෙබ් අඩවි ක්‍රියාකාරකම්, සාමාජිකයින්, අයදුම්පත් සහ පාරිභෝගික විමසීම් සජීවීව නිරීක්ෂණය කරන්න' : 'Real-time monitoring of website activity, members, applications, and customer inquiries')
                 : activeTab === 'applications' 
                   ? (locale === 'si' ? 'අන්තර්ජාලය හරහා ඉදිරිපත් කළ සාමාජික අයදුම්පත් පරීක්ෂා කිරීම, අනුමත කිරීම, සංස්කරණය හා මකා දැමීම' : 'Review, approve, edit, and manage member registration submissions and certified forms')
-                  : t('subtitle')}
+                  : activeTab === 'board'
+                    ? (locale === 'si' ? 'අධ්‍යක්ෂ මණ්ඩල සාමාජිකයින්ගේ විස්තර, ඡායාරූප, නිලතල සහ අනුපිළිවෙළ යාවත්කාලීන කරන්න' : 'Add, edit, reorder, and manage Board of Directors profiles, photos, and designations')
+                    : t('subtitle')}
             </p>
           </div>
 
@@ -1841,11 +1895,25 @@ export default function AdminDashboardPage() {
                   </form>
                 </div>
 
-                {/* Helper Schema Snippet */}
-                <div className="pt-3 border-t border-neutral-100 mt-4 text-[11px] text-neutral-400 font-mono space-y-1 bg-slate-50/70 p-3 rounded-xl border border-neutral-100">
-                  <p className="font-bold text-neutral-600 font-sans">{locale === 'si' ? 'අනුමත තීරු පිළිවෙළ:' : 'Expected Columns Format:'}</p>
-                  <p className="text-neutral-600">Member_Number, Full_Name, NIC, Phone</p>
-                  <p className="text-neutral-400 text-[10px] font-sans">{locale === 'si' ? 'හෝ නම සහ හැඳුනුම්පත් අංකය සහිත ඕනෑම CSV ගොනුවක්.' : 'Header row is automatically detected.'}</p>
+                {/* Helper Schema Snippet & Template Download */}
+                <div className="pt-3 border-t border-neutral-100 mt-4 text-[11px] text-neutral-400 font-mono space-y-2 bg-slate-50/70 p-3.5 rounded-xl border border-neutral-100">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-bold text-neutral-700 font-sans">{locale === 'si' ? 'අනුමත තීරු පිළිවෙළ:' : 'Expected Columns Format:'}</p>
+                    <button
+                      type="button"
+                      onClick={() => downloadCsvTemplate('member')}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-blue-200 text-[#003399] hover:bg-blue-50 text-[11px] font-sans font-bold shadow-2xs cursor-pointer transition-all"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>{locale === 'si' ? 'නියැදි CSV බාගන්න' : 'Download CSV Template'}</span>
+                    </button>
+                  </div>
+                  <p className="text-neutral-800 font-bold bg-white/80 p-1.5 rounded border border-neutral-200/60 overflow-x-auto text-[10.5px]">
+                    Member Number, NIC, FULL NAME, ADDRESS, POSTAL ADDRESS, GENDER
+                  </p>
+                  <p className="text-neutral-400 text-[10px] font-sans">
+                    {locale === 'si' ? 'සම්පූර්ණ තොරතුරු සහිත CSV ආකෘතිය භාවිතයෙන් පහසුවෙන්ම උඩුගත කරන්න.' : 'RFC-4180 standard CSV supported. Quotes around commas are handled automatically.'}
+                  </p>
                 </div>
               </div>
 
@@ -1931,16 +1999,35 @@ export default function AdminDashboardPage() {
                   </form>
                 </div>
 
-                {/* Helper Schema Snippet */}
-                <div className="pt-3 border-t border-neutral-100 mt-4 text-[11px] text-neutral-400 font-mono space-y-1 bg-slate-50/70 p-3 rounded-xl border border-neutral-100">
-                  <p className="font-bold text-neutral-600 font-sans">{locale === 'si' ? 'අනුමත තීරු පිළිවෙළ:' : 'Expected Columns Format:'}</p>
-                  <p className="text-neutral-600">Voter_Number, Full_Name, NIC, Polling_Division</p>
-                  <p className="text-neutral-400 text-[10px] font-sans">{locale === 'si' ? 'හෝ නම සහ හැඳුනුම්පත් අංකය සහිත ලැයිස්තුව.' : 'Verified voters count automatically syncs.'}</p>
+                {/* Helper Schema Snippet & Template Download */}
+                <div className="pt-3 border-t border-neutral-100 mt-4 text-[11px] text-neutral-400 font-mono space-y-2 bg-slate-50/70 p-3.5 rounded-xl border border-neutral-100">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-bold text-neutral-700 font-sans">{locale === 'si' ? 'අනුමත තීරු පිළිවෙළ:' : 'Expected Columns Format:'}</p>
+                    <button
+                      type="button"
+                      onClick={() => downloadCsvTemplate('voter')}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-emerald-200 text-emerald-800 hover:bg-emerald-50 text-[11px] font-sans font-bold shadow-2xs cursor-pointer transition-all"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>{locale === 'si' ? 'නියැදි CSV බාගන්න' : 'Download CSV Template'}</span>
+                    </button>
+                  </div>
+                  <p className="text-neutral-800 font-bold bg-white/80 p-1.5 rounded border border-neutral-200/60 overflow-x-auto text-[10.5px]">
+                    Member Number, NIC, FULL NAME, ADDRESS, POSTAL ADDRESS, GENDER
+                  </p>
+                  <p className="text-neutral-400 text-[10px] font-sans">
+                    {locale === 'si' ? 'ඡන්ද හිමි නාමලේඛන තොරතුරු සහිත CSV ගොනුව උඩුගත කරන්න.' : 'Verified voters count automatically syncs.'}
+                  </p>
                 </div>
               </div>
 
             </div>
           </div>
+        )}
+
+        {/* TAB: BOARD OF DIRECTORS MANAGEMENT */}
+        {activeTab === 'board' && (
+          <BoardManagementTab onCountChange={setBoardCount} />
         )}
 
         {/* TAB: NEWS & ANNOUNCEMENTS MANAGEMENT */}
