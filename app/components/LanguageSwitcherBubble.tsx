@@ -43,7 +43,7 @@ export default function LanguageSwitcherBubble() {
 
   return (
     <div
-      className="fixed bottom-6 left-6 z-50 select-none print:hidden transition-transform duration-300"
+      className="fixed bottom-6 right-6 z-50 select-none print:hidden transition-transform duration-300"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -104,7 +104,7 @@ export default function LanguageSwitcherBubble() {
 
         {/* Hover Expandable Tooltip / Helper Tag */}
         <div
-          className={`absolute bottom-full left-0 mb-2 px-3 py-1.5 rounded-xl bg-neutral-900/95 text-white text-[11px] font-medium shadow-lg backdrop-blur-xs whitespace-nowrap transition-all duration-200 pointer-events-none ${
+          className={`absolute bottom-full right-0 mb-2 px-3 py-1.5 rounded-xl bg-neutral-900/95 text-white text-[11px] font-medium shadow-lg backdrop-blur-xs whitespace-nowrap transition-all duration-200 pointer-events-none ${
             isHovered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1'
           }`}
         >
@@ -115,7 +115,7 @@ export default function LanguageSwitcherBubble() {
             {isSi ? '(Switch to English)' : '(සිංහලට මාරු වන්න)'}
           </span>
           {/* Arrow pointing down */}
-          <div className="absolute top-full left-5 -mt-1 border-4 border-transparent border-t-neutral-900/95" />
+          <div className="absolute top-full right-6 -mt-1 border-4 border-transparent border-t-neutral-900/95" />
         </div>
       </div>
     </div>
