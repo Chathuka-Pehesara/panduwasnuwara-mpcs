@@ -56,6 +56,7 @@ import AdminDashboardOverview from '@/app/components/admin/AdminDashboardOvervie
 import BusinessManagementTab from '@/app/components/admin/BusinessManagementTab';
 import BoardManagementTab from '@/app/components/admin/BoardManagementTab';
 import AdminManagementTab from '@/app/components/admin/AdminManagementTab';
+import SearchableFileSelect from '@/app/components/SearchableFileSelect';
 
 const BUSINESS_CATEGORIES = [
   { key: 'rural-bank', titleEn: 'Rural Bank', titleSi: 'ග්‍රාමීය බැංකුව' },
@@ -2080,55 +2081,25 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
                     </div>
 
                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                      <select
-                        value={selectedMemberDownloadFile}
-                        onChange={e => setSelectedMemberDownloadFile(e.target.value)}
-                        className="flex-1 px-3 py-2 bg-slate-50 border border-neutral-200 rounded-xl text-xs font-semibold text-neutral-800 focus:outline-none focus:border-[#003399] cursor-pointer"
-                      >
-                        <option value="all">
-                          {locale === 'si' 
-                            ? `සියලු සාමාජික ලේඛන එකතුව (${liveStats.membersCount.toLocaleString()})` 
-                            : `All Files / Complete Directory (${liveStats.membersCount.toLocaleString()})`}
-                        </option>
-                        {uploadedMemberFiles.map(f => (
-                          <option key={f.fileName} value={f.fileName}>
-                            {f.fileName} ({f.count.toLocaleString()} {locale === 'si' ? 'සාමාජිකයින්' : 'members'})
-                          </option>
-                        ))}
-                      </select>
+                      <SearchableFileSelect
+                        files={uploadedMemberFiles}
+                        selectedFile={selectedMemberDownloadFile}
+                        onSelect={setSelectedMemberDownloadFile}
+                        totalCount={liveStats.membersCount}
+                        theme="blue"
+                        isSinhala={locale === 'si'}
+                        className="flex-1"
+                      />
 
                       <button
                         type="button"
                         onClick={() => handleAdminDownloadMemberCsv()}
-                        className="px-4 py-2 rounded-xl bg-[#003399] hover:bg-[#002266] text-white text-xs font-bold transition-colors cursor-pointer shadow-2xs flex items-center justify-center gap-1.5 shrink-0 active:scale-98"
+                        className="px-4 py-2.5 rounded-xl bg-[#003399] hover:bg-[#002266] text-white text-xs font-bold transition-colors cursor-pointer shadow-2xs flex items-center justify-center gap-1.5 shrink-0 active:scale-98"
                       >
                         <Download className="w-3.5 h-3.5" />
                         <span>{locale === 'si' ? 'බාගන්න (CSV)' : 'Download (CSV)'}</span>
                       </button>
                     </div>
-
-                    {uploadedMemberFiles.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 pt-1">
-                        {uploadedMemberFiles.map(f => (
-                          <button
-                            key={f.fileName}
-                            type="button"
-                            onClick={() => handleAdminDownloadMemberCsv(f.fileName)}
-                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-mono transition-colors cursor-pointer shadow-2xs ${
-                              selectedMemberDownloadFile === f.fileName
-                                ? 'bg-blue-50 border-blue-300 text-[#003399] font-bold'
-                                : 'bg-white border-neutral-200 text-neutral-700 hover:bg-slate-50'
-                            }`}
-                            title={`Download ${f.fileName}`}
-                          >
-                            <FileSpreadsheet className="w-3 h-3 text-[#003399]" />
-                            <span>{f.fileName}</span>
-                            <span className="px-1.5 py-0.2 rounded bg-slate-100 text-[10px] text-neutral-500 font-bold">{f.count}</span>
-                            <Download className="w-2.5 h-2.5 text-neutral-400" />
-                          </button>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 </div>
 
@@ -2277,55 +2248,25 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
                     </div>
 
                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                      <select
-                        value={selectedDownloadFile}
-                        onChange={e => setSelectedDownloadFile(e.target.value)}
-                        className="flex-1 px-3 py-2 bg-slate-50 border border-neutral-200 rounded-xl text-xs font-semibold text-neutral-800 focus:outline-none focus:border-emerald-600 cursor-pointer"
-                      >
-                        <option value="all">
-                          {locale === 'si' 
-                            ? `සියලු ලේඛන එකතුව (${liveStats.votersCount.toLocaleString()})` 
-                            : `All Files / Complete List (${liveStats.votersCount.toLocaleString()})`}
-                        </option>
-                        {uploadedVoterFiles.map(f => (
-                          <option key={f.fileName} value={f.fileName}>
-                            {f.fileName} ({f.count.toLocaleString()} {locale === 'si' ? 'ඡන්දදායකයින්' : 'voters'})
-                          </option>
-                        ))}
-                      </select>
+                      <SearchableFileSelect
+                        files={uploadedVoterFiles}
+                        selectedFile={selectedDownloadFile}
+                        onSelect={setSelectedDownloadFile}
+                        totalCount={liveStats.votersCount}
+                        theme="emerald"
+                        isSinhala={locale === 'si'}
+                        className="flex-1"
+                      />
 
                       <button
                         type="button"
                         onClick={() => handleAdminDownloadVoterCsv()}
-                        className="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition-colors cursor-pointer shadow-2xs flex items-center justify-center gap-1.5 shrink-0 active:scale-98"
+                        className="px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition-colors cursor-pointer shadow-2xs flex items-center justify-center gap-1.5 shrink-0 active:scale-98"
                       >
                         <Download className="w-3.5 h-3.5" />
                         <span>{locale === 'si' ? 'බාගන්න (CSV)' : 'Download (CSV)'}</span>
                       </button>
                     </div>
-
-                    {uploadedVoterFiles.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 pt-1">
-                        {uploadedVoterFiles.map(f => (
-                          <button
-                            key={f.fileName}
-                            type="button"
-                            onClick={() => handleAdminDownloadVoterCsv(f.fileName)}
-                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-mono transition-colors cursor-pointer shadow-2xs ${
-                              selectedDownloadFile === f.fileName
-                                ? 'bg-emerald-50 border-emerald-300 text-emerald-900 font-bold'
-                                : 'bg-white border-neutral-200 text-neutral-700 hover:bg-slate-50'
-                            }`}
-                            title={`Download ${f.fileName}`}
-                          >
-                            <FileSpreadsheet className="w-3 h-3 text-emerald-600" />
-                            <span>{f.fileName}</span>
-                            <span className="px-1.5 py-0.2 rounded bg-slate-100 text-[10px] text-neutral-500 font-bold">{f.count}</span>
-                            <Download className="w-2.5 h-2.5 text-neutral-400" />
-                          </button>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 </div>
 

@@ -24,9 +24,9 @@ import {
   FileSpreadsheet,
   Info,
   Download,
-  MapPin
 } from 'lucide-react';
 import { useMembership } from '@/app/context/MembershipContext';
+import SearchableFileSelect from './SearchableFileSelect';
 
 export default function MembershipModals() {
   const { activeModal, closeModal, auth } = useMembership();
@@ -177,27 +177,16 @@ function MemberDetailsModal({ onClose }: { onClose: () => void }) {
             )}
           </div>
 
-          {/* File Selector Dropdown */}
-          <div className="relative min-w-[210px]">
-            <FileSpreadsheet className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
-            <select
-              value={selectedFile}
-              onChange={(e) => handleFileChange(e.target.value)}
-              className="w-full pl-8.5 pr-8 py-2.5 bg-white border border-neutral-200 rounded-xl text-xs sm:text-sm font-semibold text-neutral-800 focus:outline-none focus:border-[#003399] focus:ring-1 focus:ring-[#003399] transition-all shadow-2xs appearance-none cursor-pointer"
-            >
-              <option value="all">
-                {isSi ? 'සියලු ලේඛන / ගොනු (All Files)' : 'All Files / Complete List'}
-              </option>
-              {memberFiles.map((f) => (
-                <option key={f.fileName} value={f.fileName}>
-                  {f.fileName} ({f.count})
-                </option>
-              ))}
-            </select>
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400 text-xs">
-              ▼
-            </div>
-          </div>
+          {/* Searchable File Selector */}
+          <SearchableFileSelect
+            files={memberFiles}
+            selectedFile={selectedFile}
+            onSelect={handleFileChange}
+            totalCount={total}
+            isSinhala={isSi}
+            theme="blue"
+            className="w-full sm:w-64 shrink-0"
+          />
 
           {/* Download CSV Button */}
           <button
@@ -209,44 +198,11 @@ function MemberDetailsModal({ onClose }: { onClose: () => void }) {
             <Download className="w-4 h-4" />
             <span>
               {isSi 
-                ? (selectedFile !== 'all' ? `${selectedFile} බාගන්න (CSV)` : 'CSV බාගන්න') 
+                ? (selectedFile !== 'all' ? `${selectedFile} බාගන්න` : 'CSV බාගන්න') 
                 : (selectedFile !== 'all' ? `Download ${selectedFile}` : 'Download (CSV)')}
             </span>
           </button>
         </div>
-
-        {/* File pills indicator */}
-        {memberFiles.length > 0 && (
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px] text-neutral-600 scrollbar-none">
-            <span className="font-semibold text-neutral-400 shrink-0">{isSi ? 'ගොනු:' : 'Files:'}</span>
-            <button
-              onClick={() => handleFileChange('all')}
-              className={`px-2.5 py-0.5 rounded-lg border text-xs font-semibold shrink-0 transition-colors cursor-pointer ${
-                selectedFile === 'all'
-                  ? 'bg-[#003399] text-white border-[#003399]'
-                  : 'bg-white text-neutral-700 border-neutral-200 hover:bg-slate-100'
-              }`}
-            >
-              {isSi ? 'සියල්ල' : 'All'}
-            </button>
-            {memberFiles.map((f) => (
-              <button
-                key={f.fileName}
-                onClick={() => handleFileChange(f.fileName)}
-                className={`px-2.5 py-0.5 rounded-lg border text-xs font-semibold shrink-0 transition-colors cursor-pointer flex items-center gap-1 font-mono ${
-                  selectedFile === f.fileName
-                    ? 'bg-[#003399] text-white border-[#003399]'
-                    : 'bg-white text-neutral-700 border-neutral-200 hover:bg-slate-100'
-                }`}
-              >
-                <span>{f.fileName}</span>
-                <span className={`text-[10px] px-1 py-0.2 rounded font-sans ${selectedFile === f.fileName ? 'bg-white/20 text-white' : 'bg-slate-100 text-neutral-500'}`}>
-                  {f.count}
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Content / Table */}
@@ -478,27 +434,16 @@ function EligibleVotersModal({ onClose }: { onClose: () => void }) {
             )}
           </div>
 
-          {/* File Selector Dropdown */}
-          <div className="relative min-w-[210px]">
-            <FileSpreadsheet className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
-            <select
-              value={selectedFile}
-              onChange={(e) => handleFileChange(e.target.value)}
-              className="w-full pl-8.5 pr-8 py-2.5 bg-white border border-neutral-200 rounded-xl text-xs sm:text-sm font-semibold text-neutral-800 focus:outline-none focus:border-[#003399] focus:ring-1 focus:ring-[#003399] transition-all shadow-2xs appearance-none cursor-pointer"
-            >
-              <option value="all">
-                {isSi ? 'සියලු ලේඛන / ගොනු (All Files)' : 'All Files / Complete List'}
-              </option>
-              {voterFiles.map((f) => (
-                <option key={f.fileName} value={f.fileName}>
-                  {f.fileName} ({f.count})
-                </option>
-              ))}
-            </select>
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400 text-xs">
-              ▼
-            </div>
-          </div>
+          {/* Searchable File Selector */}
+          <SearchableFileSelect
+            files={voterFiles}
+            selectedFile={selectedFile}
+            onSelect={handleFileChange}
+            totalCount={total}
+            isSinhala={isSi}
+            theme="blue"
+            className="w-full sm:w-64 shrink-0"
+          />
 
           {/* Download CSV Button */}
           <button
@@ -510,44 +455,11 @@ function EligibleVotersModal({ onClose }: { onClose: () => void }) {
             <Download className="w-4 h-4" />
             <span>
               {isSi 
-                ? (selectedFile !== 'all' ? `${selectedFile} බාගන්න (CSV)` : 'CSV බාගන්න') 
+                ? (selectedFile !== 'all' ? `${selectedFile} බාගන්න` : 'CSV බාගන්න') 
                 : (selectedFile !== 'all' ? `Download ${selectedFile}` : 'Download (CSV)')}
             </span>
           </button>
         </div>
-
-        {/* File pills indicator */}
-        {voterFiles.length > 0 && (
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px] text-neutral-600 scrollbar-none">
-            <span className="font-semibold text-neutral-400 shrink-0">{isSi ? 'ගොනු:' : 'Files:'}</span>
-            <button
-              onClick={() => handleFileChange('all')}
-              className={`px-2.5 py-0.5 rounded-lg border text-xs font-semibold shrink-0 transition-colors cursor-pointer ${
-                selectedFile === 'all'
-                  ? 'bg-[#003399] text-white border-[#003399]'
-                  : 'bg-white text-neutral-700 border-neutral-200 hover:bg-slate-100'
-              }`}
-            >
-              {isSi ? 'සියල්ල' : 'All'}
-            </button>
-            {voterFiles.map((f) => (
-              <button
-                key={f.fileName}
-                onClick={() => handleFileChange(f.fileName)}
-                className={`px-2.5 py-0.5 rounded-lg border text-xs font-semibold shrink-0 transition-colors cursor-pointer flex items-center gap-1 font-mono ${
-                  selectedFile === f.fileName
-                    ? 'bg-[#003399] text-white border-[#003399]'
-                    : 'bg-white text-neutral-700 border-neutral-200 hover:bg-slate-100'
-                }`}
-              >
-                <span>{f.fileName}</span>
-                <span className={`text-[10px] px-1 py-0.2 rounded font-sans ${selectedFile === f.fileName ? 'bg-white/20 text-white' : 'bg-slate-100 text-neutral-500'}`}>
-                  {f.count}
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Content / Table */}
