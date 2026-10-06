@@ -22,7 +22,9 @@ import {
   FileCheck,
   Loader2,
   FileSpreadsheet,
-  Info
+  Info,
+  Download,
+  MapPin
 } from 'lucide-react';
 import { useMembership } from '@/app/context/MembershipContext';
 
@@ -237,16 +239,41 @@ function EligibleVotersModal({ onClose }: { onClose: () => void }) {
   const locale = useLocale();
   const isSi = locale === 'si';
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedFile, setSelectedFile] = useState<string>('all');
+  const [voterFiles, setVoterFiles] = useState<{ fileName: string; displayName: string; count: number }[]>([]);
   const [voters, setVoters] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchVoters = async (search = '', pageNum = 1) => {
+  // Load distinct uploaded files
+  useEffect(() => {
+    const fetchVoterFiles = async () => {
+      try {
+        const res = await fetch('/api/voters/locations');
+        const data = await res.json();
+        if (data.success && Array.isArray(data.files)) {
+          setVoterFiles(data.files);
+        } else if (data.success && Array.isArray(data.locations)) {
+          setVoterFiles(data.locations.map((l: any) => ({
+            fileName: l.fileName || `${l.location}.csv`,
+            displayName: l.location,
+            count: l.count
+          })));
+        }
+      } catch (err) {
+        console.error('Error fetching voter files:', err);
+      }
+    };
+    fetchVoterFiles();
+  }, []);
+
+  const fetchVoters = async (search = '', pageNum = 1, file = selectedFile) => {
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/membership/voters?q=${encodeURIComponent(search)}&page=${pageNum}&limit=25`);
+      const fileParam = file && file !== 'all' ? `&file=${encodeURIComponent(file)}` : '';
+      const res = await fetch(`/api/membership/voters?q=${encodeURIComponent(search)}&page=${pageNum}&limit=25${fileParam}`);
       const data = await res.json();
       if (data.success) {
         setVoters(data.voters || []);
@@ -263,14 +290,24 @@ function EligibleVotersModal({ onClose }: { onClose: () => void }) {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      fetchVoters(searchTerm, 1);
+      fetchVoters(searchTerm, 1, selectedFile);
     }, 300);
     return () => clearTimeout(timer);
-  }, [searchTerm]);
+  }, [searchTerm, selectedFile]);
+
+  const handleFileChange = (file: string) => {
+    setSelectedFile(file);
+    setPage(1);
+  };
 
   const handlePageChange = (newPage: number) => {
     if (newPage < 1 || newPage > totalPages) return;
-    fetchVoters(searchTerm, newPage);
+    fetchVoters(searchTerm, newPage, selectedFile);
+  };
+
+  const handleDownloadCsv = () => {
+    const url = `/api/voters/download?file=${encodeURIComponent(selectedFile)}`;
+    window.open(url, '_blank');
   };
 
   return (
@@ -305,26 +342,99 @@ function EligibleVotersModal({ onClose }: { onClose: () => void }) {
         </button>
       </div>
 
-      {/* Search Bar */}
-      <div className="p-4 sm:p-6 border-b border-neutral-200/80 bg-slate-50/50 shrink-0">
-        <div className="relative">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder={isSi ? 'නම, ජාතික හැඳුනුම්පත, ඡන්ද අංකය හෝ කොට්ඨාසය මගින් සොයන්න...' : 'Search by Name, NIC, Voter No, or Division...'}
-            className="w-full pl-10 pr-10 py-2.5 bg-white border border-neutral-200 rounded-xl text-xs sm:text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-[#003399] focus:ring-1 focus:ring-[#003399] transition-all shadow-2xs"
-          />
-          {searchTerm && (
-            <button
-              onClick={() => setSearchTerm('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 cursor-pointer"
+      {/* Filter Toolbar: Search, File Select, Download Button */}
+      <div className="p-4 sm:p-5 border-b border-neutral-200/80 bg-slate-50/50 shrink-0 space-y-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          {/* Search Bar */}
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder={isSi ? 'නම, හැඳුනුම්පත, ඡන්ද අංකය හෝ ගොනුව සොයන්න...' : 'Search by Name, NIC, Voter No, or File...'}
+              className="w-full pl-10 pr-10 py-2.5 bg-white border border-neutral-200 rounded-xl text-xs sm:text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-[#003399] focus:ring-1 focus:ring-[#003399] transition-all shadow-2xs"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* File Selector Dropdown */}
+          <div className="relative min-w-[210px]">
+            <FileSpreadsheet className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
+            <select
+              value={selectedFile}
+              onChange={(e) => handleFileChange(e.target.value)}
+              className="w-full pl-8.5 pr-8 py-2.5 bg-white border border-neutral-200 rounded-xl text-xs sm:text-sm font-semibold text-neutral-800 focus:outline-none focus:border-[#003399] focus:ring-1 focus:ring-[#003399] transition-all shadow-2xs appearance-none cursor-pointer"
             >
-              <X className="w-4 h-4" />
-            </button>
-          )}
+              <option value="all">
+                {isSi ? 'සියලු ලේඛන / ගොනු (All Files)' : 'All Files / Complete List'}
+              </option>
+              {voterFiles.map((f) => (
+                <option key={f.fileName} value={f.fileName}>
+                  {f.fileName} ({f.count})
+                </option>
+              ))}
+            </select>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400 text-xs">
+              ▼
+            </div>
+          </div>
+
+          {/* Download CSV Button */}
+          <button
+            onClick={handleDownloadCsv}
+            type="button"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#003399] hover:bg-[#002266] text-white text-xs sm:text-sm font-bold shadow-2xs cursor-pointer transition-all shrink-0 active:scale-98"
+            title={isSi ? 'තෝරාගත් ගොනුවේ ඡන්ද හිමි නාමලේඛනය බාගන්න' : 'Download Electoral Register CSV'}
+          >
+            <Download className="w-4 h-4" />
+            <span>
+              {isSi 
+                ? (selectedFile !== 'all' ? `${selectedFile} බාගන්න (CSV)` : 'CSV බාගන්න') 
+                : (selectedFile !== 'all' ? `Download ${selectedFile}` : 'Download (CSV)')}
+            </span>
+          </button>
         </div>
+
+        {/* File pills indicator */}
+        {voterFiles.length > 0 && (
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px] text-neutral-600 scrollbar-none">
+            <span className="font-semibold text-neutral-400 shrink-0">{isSi ? 'ගොනු:' : 'Files:'}</span>
+            <button
+              onClick={() => handleFileChange('all')}
+              className={`px-2.5 py-0.5 rounded-lg border text-xs font-semibold shrink-0 transition-colors cursor-pointer ${
+                selectedFile === 'all'
+                  ? 'bg-[#003399] text-white border-[#003399]'
+                  : 'bg-white text-neutral-700 border-neutral-200 hover:bg-slate-100'
+              }`}
+            >
+              {isSi ? 'සියල්ල' : 'All'}
+            </button>
+            {voterFiles.map((f) => (
+              <button
+                key={f.fileName}
+                onClick={() => handleFileChange(f.fileName)}
+                className={`px-2.5 py-0.5 rounded-lg border text-xs font-semibold shrink-0 transition-colors cursor-pointer flex items-center gap-1 font-mono ${
+                  selectedFile === f.fileName
+                    ? 'bg-[#003399] text-white border-[#003399]'
+                    : 'bg-white text-neutral-700 border-neutral-200 hover:bg-slate-100'
+                }`}
+              >
+                <span>{f.fileName}</span>
+                <span className={`text-[10px] px-1 py-0.2 rounded font-sans ${selectedFile === f.fileName ? 'bg-white/20 text-white' : 'bg-slate-100 text-neutral-500'}`}>
+                  {f.count}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Content / Table */}
@@ -343,7 +453,7 @@ function EligibleVotersModal({ onClose }: { onClose: () => void }) {
             <p className="text-xs text-neutral-400 max-w-sm mx-auto">
               {searchTerm 
                 ? (isSi ? 'සෙවුම් පදය වෙනස් කර නැවත උත්සාහ කරන්න.' : 'Try changing your search terms.') 
-                : (isSi ? 'දැනට ඡන්ද හිමි නාමලේඛනය උඩුගත කර නොමැත.' : 'No voter register data has been uploaded yet.')}
+                : (isSi ? 'තෝරාගත් ගොනුව සඳහා ඡන්ද හිමි නාමලේඛනයක් හමු නොවීය.' : 'No voters found for the selected file.')}
             </p>
           </div>
         ) : (
@@ -355,6 +465,7 @@ function EligibleVotersModal({ onClose }: { onClose: () => void }) {
                     <th className="py-3 px-4">{isSi ? 'ඡන්ද අංකය' : 'Voter No'}</th>
                     <th className="py-3 px-4">{isSi ? 'සම්පූර්ණ නම' : 'Full Name'}</th>
                     <th className="py-3 px-4">{isSi ? 'ජාතික හැඳුනුම්පත' : 'NIC Number'}</th>
+                    <th className="py-3 px-4">{isSi ? 'ලේඛන ගොනුව' : 'File Name'}</th>
                     <th className="py-3 px-4">{isSi ? 'කොට්ඨාසය / ශාඛාව' : 'Division'}</th>
                   </tr>
                 </thead>
@@ -362,13 +473,23 @@ function EligibleVotersModal({ onClose }: { onClose: () => void }) {
                   {voters.map((v, idx) => (
                     <tr key={v.id || idx} className="hover:bg-slate-50/80 transition-colors">
                       <td className="py-3 px-4 font-mono font-bold text-[#003399]">
-                        {v.voter_number || v.voterNumber || '—'}
+                        {v.voter_number || v.member_number || v.voterNumber || '—'}
                       </td>
                       <td className="py-3 px-4 font-semibold text-neutral-900">
                         {v.full_name || v.fullName}
                       </td>
                       <td className="py-3 px-4 font-mono text-neutral-600">
                         {v.nic || '—'}
+                      </td>
+                      <td className="py-3 px-4 text-neutral-700">
+                        {(v.file_name || v.fileName || v.location) ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-blue-50 border border-blue-200/80 text-[#003399] text-xs font-semibold font-mono">
+                            <FileSpreadsheet className="w-3 h-3 text-[#003399]" />
+                            {v.file_name || v.fileName || (v.location ? `${v.location}.csv` : '—')}
+                          </span>
+                        ) : (
+                          <span className="text-neutral-400 text-xs italic">—</span>
+                        )}
                       </td>
                       <td className="py-3 px-4 text-neutral-600">
                         <span className="inline-block px-2.5 py-0.5 rounded-md bg-slate-100 border border-neutral-200 text-neutral-700 text-xs font-medium">

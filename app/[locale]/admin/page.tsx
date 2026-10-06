@@ -205,10 +205,12 @@ export default function AdminDashboardPage() {
   const [memberImportMsg, setMemberImportMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Voter Register Upload State
-  const [voterFile, setVoterFile] = useState<File | null>(null);
-  const [voterMode, setVoterMode] = useState<'append' | 'replace'>('append');
+  const [voterFiles, setVoterFiles] = useState<File[]>([]);
+  const [voterMode, setVoterMode] = useState<'append' | 'replace' | 'replace_file'>('append');
   const [isUploadingVoters, setIsUploadingVoters] = useState(false);
   const [voterUploadMsg, setVoterUploadMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [uploadedVoterFiles, setUploadedVoterFiles] = useState<{ fileName: string; displayName: string; count: number }[]>([]);
+  const [selectedDownloadFile, setSelectedDownloadFile] = useState<string>('all');
 
   // Edit user modal state
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -313,12 +315,34 @@ export default function AdminDashboardPage() {
       }
 
       await fetchAdminFuelPrices();
+
+      try {
+        const voterFilesRes = await fetch('/api/voters/locations');
+        const voterFilesData = await voterFilesRes.json();
+        if (voterFilesData.success && Array.isArray(voterFilesData.files)) {
+          setUploadedVoterFiles(voterFilesData.files);
+        }
+      } catch {
+        // ignore
+      }
     } catch (err) {
       console.error('Failed to load admin data:', err);
     } finally {
       setIsLoading(false);
     }
   }, []);
+
+  const fetchUploadedVoterFiles = async () => {
+    try {
+      const res = await fetch('/api/voters/locations');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.files)) {
+        setUploadedVoterFiles(data.files);
+      }
+    } catch (err) {
+      console.error('Error fetching voter files:', err);
+    }
+  };
 
   // Check admin session — also enforces tab-scope via sessionStorage
   const verifyAdmin = useCallback(async () => {
@@ -637,14 +661,16 @@ export default function AdminDashboardPage() {
   // Upload Electoral Register (Eligible Voters)
   const handleUploadVoters = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!voterFile) return;
+    if (voterFiles.length === 0) return;
 
     setIsUploadingVoters(true);
     setVoterUploadMsg(null);
 
     try {
       const formData = new FormData();
-      formData.append('file', voterFile);
+      voterFiles.forEach(f => {
+        formData.append('files', f);
+      });
       formData.append('mode', voterMode);
 
       const res = await fetch('/api/admin/voters/upload', {
@@ -656,15 +682,22 @@ export default function AdminDashboardPage() {
       if (data.success) {
         setVoterUploadMsg({ type: 'success', text: data.message || `Successfully processed ${data.uploadedCount} eligible voters!` });
         setLiveStats(prev => ({ ...prev, votersCount: data.totalCount }));
-        setVoterFile(null);
+        setVoterFiles([]);
+        fetchUploadedVoterFiles();
       } else {
         setVoterUploadMsg({ type: 'error', text: data.error || 'Failed to upload electoral register.' });
       }
     } catch {
-      setVoterUploadMsg({ type: 'error', text: 'Error uploading electoral register file.' });
+      setVoterUploadMsg({ type: 'error', text: 'Error uploading electoral register file(s).' });
     } finally {
       setIsUploadingVoters(false);
     }
+  };
+
+  const handleAdminDownloadVoterCsv = (fileToDownload?: string) => {
+    const target = fileToDownload || selectedDownloadFile;
+    const url = `/api/voters/download?file=${encodeURIComponent(target)}`;
+    window.open(url, '_blank');
   };
 
   // Download Sample CSV Template in required format: Member Number, NIC, FULL NAME, ADDRESS, POSTAL ADDRESS, GENDER
@@ -2031,19 +2064,34 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
                     {/* File Input */}
                     <div className="space-y-1.5">
                       <label className="block text-xs font-bold text-neutral-700">
-                        {locale === 'si' ? 'ඡන්ද හිමි නාමලේඛන ගොනුව (CSV / Text)' : 'Select Electoral Register File (CSV / Text)'}
+                        {locale === 'si' ? 'ඡන්ද හිමි නාමලේඛන CSV ගොනු තෝරන්න (එක් ගොනුවක් හෝ කිහිපයක්)' : 'Select Electoral Register File(s) (One or More CSVs)'}
                       </label>
                       <input
                         type="file"
                         accept=".csv,.txt,.tsv"
+                        multiple
                         required
-                        onChange={e => setVoterFile(e.target.files?.[0] || null)}
+                        onChange={e => {
+                          if (e.target.files) {
+                            setVoterFiles(Array.from(e.target.files));
+                          }
+                        }}
                         className="w-full text-xs text-neutral-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-neutral-700 hover:file:bg-slate-200 cursor-pointer border border-neutral-200 rounded-xl p-2 bg-slate-50"
                       />
+                      {voterFiles.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {voterFiles.map((f, i) => (
+                            <span key={i} className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-mono">
+                              <FileSpreadsheet className="w-3 h-3 text-emerald-600" />
+                              {f.name} ({(f.size / 1024).toFixed(1)} KB)
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     {/* Mode Radio */}
-                    <div className="flex items-center gap-4 text-xs text-neutral-700">
+                    <div className="flex flex-wrap items-center gap-4 text-xs text-neutral-700">
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input
                           type="radio"
@@ -2054,6 +2102,17 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
                           className="text-emerald-700"
                         />
                         <span>{t('modeAppend')}</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="voterMode"
+                          value="replace_file"
+                          checked={voterMode === 'replace_file'}
+                          onChange={() => setVoterMode('replace_file')}
+                          className="text-emerald-700"
+                        />
+                        <span>{locale === 'si' ? 'මෙම ගොනුවේ දත්ත පමණක් ප්‍රතිස්ථාපනය' : 'Replace matching file(s) only'}</span>
                       </label>
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input
@@ -2070,13 +2129,80 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
 
                     <button
                       type="submit"
-                      disabled={isUploadingVoters || !voterFile}
+                      disabled={isUploadingVoters || voterFiles.length === 0}
                       className="w-full py-2.5 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition-colors cursor-pointer shadow-xs disabled:opacity-50 flex items-center justify-center gap-2"
                     >
                       <Upload className={`w-3.5 h-3.5 ${isUploadingVoters ? 'animate-bounce' : ''}`} />
-                      <span>{isUploadingVoters ? 'Processing...' : t('uploadBtn')}</span>
+                      <span>
+                        {isUploadingVoters 
+                          ? 'Processing...' 
+                          : (voterFiles.length > 1 
+                              ? (locale === 'si' ? `ගොනු ${voterFiles.length}ක් උඩුගත කර සකසන්න` : `Upload & Process ${voterFiles.length} Files`) 
+                              : t('uploadBtn'))}
+                      </span>
                     </button>
                   </form>
+
+                  {/* SECTION B-2: DOWNLOAD ELECTIVE MEMBERS BY FILE */}
+                  <div className="pt-4 border-t border-neutral-100 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-800">
+                        <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
+                        <span>{locale === 'si' ? 'ගොනුව අනුව ඡන්ද හිමි නාමලේඛනය බාගන්න:' : 'Download Elective Members by File:'}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                      <select
+                        value={selectedDownloadFile}
+                        onChange={e => setSelectedDownloadFile(e.target.value)}
+                        className="flex-1 px-3 py-2 bg-slate-50 border border-neutral-200 rounded-xl text-xs font-semibold text-neutral-800 focus:outline-none focus:border-emerald-600 cursor-pointer"
+                      >
+                        <option value="all">
+                          {locale === 'si' 
+                            ? `සියලු ලේඛන එකතුව (${liveStats.votersCount.toLocaleString()})` 
+                            : `All Files / Complete List (${liveStats.votersCount.toLocaleString()})`}
+                        </option>
+                        {uploadedVoterFiles.map(f => (
+                          <option key={f.fileName} value={f.fileName}>
+                            {f.fileName} ({f.count.toLocaleString()} {locale === 'si' ? 'ඡන්දදායකයින්' : 'voters'})
+                          </option>
+                        ))}
+                      </select>
+
+                      <button
+                        type="button"
+                        onClick={() => handleAdminDownloadVoterCsv()}
+                        className="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition-colors cursor-pointer shadow-2xs flex items-center justify-center gap-1.5 shrink-0 active:scale-98"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>{locale === 'si' ? 'බාගන්න (CSV)' : 'Download (CSV)'}</span>
+                      </button>
+                    </div>
+
+                    {uploadedVoterFiles.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {uploadedVoterFiles.map(f => (
+                          <button
+                            key={f.fileName}
+                            type="button"
+                            onClick={() => handleAdminDownloadVoterCsv(f.fileName)}
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-mono transition-colors cursor-pointer shadow-2xs ${
+                              selectedDownloadFile === f.fileName
+                                ? 'bg-emerald-50 border-emerald-300 text-emerald-900 font-bold'
+                                : 'bg-white border-neutral-200 text-neutral-700 hover:bg-slate-50'
+                            }`}
+                            title={`Download ${f.fileName}`}
+                          >
+                            <FileSpreadsheet className="w-3 h-3 text-emerald-600" />
+                            <span>{f.fileName}</span>
+                            <span className="px-1.5 py-0.2 rounded bg-slate-100 text-[10px] text-neutral-500 font-bold">{f.count}</span>
+                            <Download className="w-2.5 h-2.5 text-neutral-400" />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Helper Schema Snippet & Template Download */}
