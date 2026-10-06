@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAllUsers, updateUser, deleteUser } from '@/lib/models/user';
+import { getAllUsers, updateUser, deleteUser, findUserById } from '@/lib/models/user';
 
 function isAdmin(req: NextRequest): boolean {
   const token = req.cookies.get('mpcs_admin_token')?.value || req.cookies.get('mpcs_auth_token')?.value;
@@ -41,17 +41,20 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'User ID is required' }, { status: 400 });
     }
 
+    const targetUser = await findUserById(Number(id));
+    if (!targetUser) {
+      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
+    }
+
+    const isAdminAccount = targetUser.role === 'admin' || targetUser.role === 'superadmin';
+
     const updated = await updateUser(Number(id), {
       fullName,
       nic,
       phone,
       role,
-      password: password ? password.trim() : undefined
+      password: (!isAdminAccount && password) ? password.trim() : undefined
     });
-
-    if (!updated) {
-      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
-    }
 
     return NextResponse.json({ success: true, user: updated });
   } catch (err: unknown) {
