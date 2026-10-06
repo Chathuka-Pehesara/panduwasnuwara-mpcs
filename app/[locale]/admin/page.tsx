@@ -44,7 +44,6 @@ import {
   Send,
   Copy,
   RotateCcw,
-  Sparkles,
   FileCheck,
   LayoutDashboard,
   Download
@@ -56,6 +55,8 @@ import AdminDashboardOverview from '@/app/components/admin/AdminDashboardOvervie
 import BusinessManagementTab from '@/app/components/admin/BusinessManagementTab';
 import BoardManagementTab from '@/app/components/admin/BoardManagementTab';
 import AdminManagementTab from '@/app/components/admin/AdminManagementTab';
+import AdminProfileTab from '@/app/components/admin/AdminProfileTab';
+import SearchableFileSelect from '@/app/components/SearchableFileSelect';
 
 const BUSINESS_CATEGORIES = [
   { key: 'rural-bank', titleEn: 'Rural Bank', titleSi: 'ග්‍රාමීය බැංකුව' },
@@ -84,7 +85,7 @@ export default function AdminDashboardPage() {
   const locale = useLocale();
   const router = useRouter();
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'admins' | 'applications' | 'metrics' | 'board' | 'news' | 'gallery' | 'messages' | 'services' | 'fuel' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'profile' | 'users' | 'admins' | 'applications' | 'metrics' | 'board' | 'news' | 'gallery' | 'messages' | 'services' | 'fuel' | 'settings'>('dashboard');
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [appsTotalCount, setAppsTotalCount] = useState(0);
@@ -199,16 +200,20 @@ export default function AdminDashboardPage() {
   });
 
   // Member CSV Upload State
-  const [memberFile, setMemberFile] = useState<File | null>(null);
-  const [memberMode, setMemberMode] = useState<'append' | 'replace'>('append');
+  const [memberFiles, setMemberFiles] = useState<File[]>([]);
+  const [memberMode, setMemberMode] = useState<'append' | 'replace' | 'replace_file'>('append');
   const [isImportingMembers, setIsImportingMembers] = useState(false);
   const [memberImportMsg, setMemberImportMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [uploadedMemberFiles, setUploadedMemberFiles] = useState<{ fileName: string; displayName: string; count: number }[]>([]);
+  const [selectedMemberDownloadFile, setSelectedMemberDownloadFile] = useState<string>('all');
 
   // Voter Register Upload State
-  const [voterFile, setVoterFile] = useState<File | null>(null);
-  const [voterMode, setVoterMode] = useState<'append' | 'replace'>('append');
+  const [voterFiles, setVoterFiles] = useState<File[]>([]);
+  const [voterMode, setVoterMode] = useState<'append' | 'replace' | 'replace_file'>('append');
   const [isUploadingVoters, setIsUploadingVoters] = useState(false);
   const [voterUploadMsg, setVoterUploadMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [uploadedVoterFiles, setUploadedVoterFiles] = useState<{ fileName: string; displayName: string; count: number }[]>([]);
+  const [selectedDownloadFile, setSelectedDownloadFile] = useState<string>('all');
 
   // Edit user modal state
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -313,12 +318,53 @@ export default function AdminDashboardPage() {
       }
 
       await fetchAdminFuelPrices();
+
+      try {
+        const [voterFilesRes, memberFilesRes] = await Promise.all([
+          fetch('/api/voters/locations'),
+          fetch('/api/members/files')
+        ]);
+        const voterFilesData = await voterFilesRes.json();
+        const memberFilesData = await memberFilesRes.json();
+        if (voterFilesData.success && Array.isArray(voterFilesData.files)) {
+          setUploadedVoterFiles(voterFilesData.files);
+        }
+        if (memberFilesData.success && Array.isArray(memberFilesData.files)) {
+          setUploadedMemberFiles(memberFilesData.files);
+        }
+      } catch {
+        // ignore
+      }
     } catch (err) {
       console.error('Failed to load admin data:', err);
     } finally {
       setIsLoading(false);
     }
   }, []);
+
+  const fetchUploadedMemberFiles = async () => {
+    try {
+      const res = await fetch('/api/members/files');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.files)) {
+        setUploadedMemberFiles(data.files);
+      }
+    } catch (err) {
+      console.error('Error fetching member files:', err);
+    }
+  };
+
+  const fetchUploadedVoterFiles = async () => {
+    try {
+      const res = await fetch('/api/voters/locations');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.files)) {
+        setUploadedVoterFiles(data.files);
+      }
+    } catch (err) {
+      console.error('Error fetching voter files:', err);
+    }
+  };
 
   // Check admin session — also enforces tab-scope via sessionStorage
   const verifyAdmin = useCallback(async () => {
@@ -602,16 +648,19 @@ export default function AdminDashboardPage() {
   };
 
   // Import Members from CSV
+  // Import Members from CSV
   const handleImportMembers = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!memberFile) return;
+    if (memberFiles.length === 0) return;
 
     setIsImportingMembers(true);
     setMemberImportMsg(null);
 
     try {
       const formData = new FormData();
-      formData.append('file', memberFile);
+      memberFiles.forEach(f => {
+        formData.append('files', f);
+      });
       formData.append('mode', memberMode);
 
       const res = await fetch('/api/admin/members/import', {
@@ -623,28 +672,37 @@ export default function AdminDashboardPage() {
       if (data.success) {
         setMemberImportMsg({ type: 'success', text: data.message || `Successfully imported ${data.importedCount} members!` });
         setLiveStats(prev => ({ ...prev, membersCount: data.totalCount }));
-        setMemberFile(null);
+        setMemberFiles([]);
+        fetchUploadedMemberFiles();
       } else {
         setMemberImportMsg({ type: 'error', text: data.error || 'Failed to import member records.' });
       }
     } catch {
-      setMemberImportMsg({ type: 'error', text: 'Error uploading file.' });
+      setMemberImportMsg({ type: 'error', text: 'Error uploading member file(s).' });
     } finally {
       setIsImportingMembers(false);
     }
   };
 
+  const handleAdminDownloadMemberCsv = (fileToDownload?: string) => {
+    const target = fileToDownload || selectedMemberDownloadFile;
+    const url = `/api/members/download?file=${encodeURIComponent(target)}`;
+    window.open(url, '_blank');
+  };
+
   // Upload Electoral Register (Eligible Voters)
   const handleUploadVoters = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!voterFile) return;
+    if (voterFiles.length === 0) return;
 
     setIsUploadingVoters(true);
     setVoterUploadMsg(null);
 
     try {
       const formData = new FormData();
-      formData.append('file', voterFile);
+      voterFiles.forEach(f => {
+        formData.append('files', f);
+      });
       formData.append('mode', voterMode);
 
       const res = await fetch('/api/admin/voters/upload', {
@@ -656,15 +714,22 @@ export default function AdminDashboardPage() {
       if (data.success) {
         setVoterUploadMsg({ type: 'success', text: data.message || `Successfully processed ${data.uploadedCount} eligible voters!` });
         setLiveStats(prev => ({ ...prev, votersCount: data.totalCount }));
-        setVoterFile(null);
+        setVoterFiles([]);
+        fetchUploadedVoterFiles();
       } else {
         setVoterUploadMsg({ type: 'error', text: data.error || 'Failed to upload electoral register.' });
       }
     } catch {
-      setVoterUploadMsg({ type: 'error', text: 'Error uploading electoral register file.' });
+      setVoterUploadMsg({ type: 'error', text: 'Error uploading electoral register file(s).' });
     } finally {
       setIsUploadingVoters(false);
     }
+  };
+
+  const handleAdminDownloadVoterCsv = (fileToDownload?: string) => {
+    const target = fileToDownload || selectedDownloadFile;
+    const url = `/api/voters/download?file=${encodeURIComponent(target)}`;
+    window.open(url, '_blank');
   };
 
   // Download Sample CSV Template in required format: Member Number, NIC, FULL NAME, ADDRESS, POSTAL ADDRESS, GENDER
@@ -1352,6 +1417,29 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
               </div>
             </button>
 
+            {/* My Profile Tab */}
+            <button
+              onClick={() => {
+                setActiveTab('profile');
+                setIsMobileSidebarOpen(false);
+              }}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                activeTab === 'profile'
+                  ? 'bg-[#003399] text-white shadow-xs'
+                  : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900'
+              }`}
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <UserIcon className={`w-4 h-4 shrink-0 ${activeTab === 'profile' ? 'text-white' : 'text-[#003399]'}`} />
+                <span className="whitespace-nowrap">{locale === 'si' ? 'මගේ පැතිකඩ' : 'My Profile'}</span>
+              </div>
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border shrink-0 ${
+                activeTab === 'profile' ? 'bg-[#002266] text-white border-blue-400/40' : 'bg-slate-100 text-[#003399] border-slate-200'
+              }`}>
+                {isSuperAdmin ? 'SUPER' : 'ADMIN'}
+              </span>
+            </button>
+
             <button
               onClick={() => {
                 setActiveTab('users');
@@ -1626,6 +1714,7 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
             <div className="min-w-0">
               <h1 className="font-condensed text-xl font-bold text-neutral-900 leading-tight truncate">
                 {activeTab === 'dashboard' && (locale === 'si' ? 'පාලන පුවරුව සහ දළ විශ්ලේෂණය' : 'Dashboard Overview')}
+                {activeTab === 'profile' && (locale === 'si' ? 'මගේ පැතිකඩ සහ ආරක්ෂක කළමනාකරණය' : 'Profile & Security Management')}
                 {activeTab === 'users' && t('usersTab')}
                 {activeTab === 'admins' && (locale === 'si' ? 'පරිපාලක ගිණුම් කළමනාකරණය' : 'Administrator Accounts Management')}
                 {activeTab === 'applications' && (locale === 'si' ? 'සාමාජිකත්ව අයදුම්පත් කළමනාකරණය' : 'Membership Applications Management')}
@@ -1641,6 +1730,8 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
               <p className="text-xs text-neutral-500 truncate hidden sm:block">
                 {activeTab === 'dashboard'
                   ? (locale === 'si' ? 'වෙබ් අඩවි ක්‍රියාකාරකම්, සාමාජිකයින්, අයදුම්පත් සහ පාරිභෝගික විමසීම් සජීවීව නිරීක්ෂණය කරන්න' : 'Real-time monitoring of website activity, members, applications, and customer inquiries')
+                  : activeTab === 'profile'
+                    ? (locale === 'si' ? 'ඔබගේ පුද්ගලික තොරතුරු, සම්බන්ධතා විස්තර සහ පිවිසුම් මුරපදය ආරක්ෂිතව යාවත්කාලීන කරන්න' : 'Update your personal credentials, contact information, and account security password')
                   : activeTab === 'admins'
                     ? (locale === 'si' ? 'පද්ධති පරිපාලකයින්ගේ ප්‍රවේශ අයිතීන්, මුරපද සහ නව පරිපාලක ගිණුම් කළමනාකරණය' : 'Manage system administrator privileges, credentials, and access roles')
                   : activeTab === 'applications' 
@@ -1664,8 +1755,17 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
               <span className="hidden md:inline">{locale === 'si' ? 'වෙබ් අඩවිය' : 'Live Website'}</span>
             </Link>
 
-            {/* Administrator Profile Pill */}
-            <div className="hidden lg:flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-slate-50 border border-neutral-200">
+            {/* Administrator Profile Pill (Clickable -> Profile Tab) */}
+            <button
+              type="button"
+              onClick={() => setActiveTab('profile')}
+              title={locale === 'si' ? 'මගේ පැතිකඩ සහ මුරපදය කළමනාකරණය' : 'Manage Profile & Security'}
+              className={`hidden lg:flex items-center gap-2.5 px-3 py-1.5 rounded-lg border text-left cursor-pointer transition-all ${
+                activeTab === 'profile'
+                  ? 'bg-blue-50 border-[#003399] shadow-xs ring-1 ring-[#003399]/30'
+                  : 'bg-slate-50 hover:bg-slate-100 hover:border-slate-300 border-neutral-200'
+              }`}
+            >
               <div className={`w-7 h-7 rounded-md border flex items-center justify-center font-bold text-[11px] shrink-0 ${
                 isSuperAdmin 
                   ? 'bg-slate-900 border-slate-800 text-amber-400' 
@@ -1684,7 +1784,7 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
                 </div>
                 <p className="text-[10px] text-neutral-400 font-mono leading-tight">{currentUser?.username || 'admin'}</p>
               </div>
-            </div>
+            </button>
 
             {/* Log Out Button */}
             <button
@@ -1715,6 +1815,17 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
             onCountChange={(total, pending) => {
               setAppsTotalCount(total);
               setAppsPendingCount(pending);
+            }}
+          />
+        )}
+
+        {/* TAB: PROFILE & SECURITY MANAGEMENT */}
+        {activeTab === 'profile' && (
+          <AdminProfileTab
+            currentUser={currentUser}
+            isSuperAdmin={isSuperAdmin}
+            onProfileUpdated={(updated) => {
+              setCurrentUser((prev: any) => ({ ...prev, ...updated }));
             }}
           />
         )}
@@ -1927,19 +2038,34 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
                     {/* File Input */}
                     <div className="space-y-1.5">
                       <label className="block text-xs font-bold text-neutral-700">
-                        {locale === 'si' ? 'සාමාජික ගොනුව තෝරන්න (CSV / TSV / Excel)' : 'Select Member File (CSV / TSV)'}
+                        {locale === 'si' ? 'සාමාජික CSV ගොනු තෝරන්න (එක් ගොනුවක් හෝ කිහිපයක්)' : 'Select Member File(s) (One or More CSVs)'}
                       </label>
                       <input
                         type="file"
                         accept=".csv,.txt,.tsv"
+                        multiple
                         required
-                        onChange={e => setMemberFile(e.target.files?.[0] || null)}
+                        onChange={e => {
+                          if (e.target.files) {
+                            setMemberFiles(Array.from(e.target.files));
+                          }
+                        }}
                         className="w-full text-xs text-neutral-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-neutral-700 hover:file:bg-slate-200 cursor-pointer border border-neutral-200 rounded-xl p-2 bg-slate-50"
                       />
+                      {memberFiles.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {memberFiles.map((f, i) => (
+                            <span key={i} className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-blue-50 border border-blue-200 text-[#003399] text-[11px] font-mono">
+                              <FileSpreadsheet className="w-3 h-3 text-[#003399]" />
+                              {f.name} ({(f.size / 1024).toFixed(1)} KB)
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     {/* Mode Radio */}
-                    <div className="flex items-center gap-4 text-xs text-neutral-700">
+                    <div className="flex flex-wrap items-center gap-4 text-xs text-neutral-700">
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input
                           type="radio"
@@ -1950,6 +2076,17 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
                           className="text-[#003399]"
                         />
                         <span>{t('modeAppend')}</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="memberMode"
+                          value="replace_file"
+                          checked={memberMode === 'replace_file'}
+                          onChange={() => setMemberMode('replace_file')}
+                          className="text-[#003399]"
+                        />
+                        <span>{locale === 'si' ? 'මෙම ගොනුවේ දත්ත පමණක් ප්‍රතිස්ථාපනය' : 'Replace matching file(s) only'}</span>
                       </label>
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input
@@ -1966,13 +2103,50 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
 
                     <button
                       type="submit"
-                      disabled={isImportingMembers || !memberFile}
+                      disabled={isImportingMembers || memberFiles.length === 0}
                       className="w-full py-2.5 px-4 rounded-xl bg-[#003399] hover:bg-[#002266] text-white text-xs font-bold transition-colors cursor-pointer shadow-xs disabled:opacity-50 flex items-center justify-center gap-2"
                     >
                       <Upload className={`w-3.5 h-3.5 ${isImportingMembers ? 'animate-bounce' : ''}`} />
-                      <span>{isImportingMembers ? 'Processing...' : t('uploadBtn')}</span>
+                      <span>
+                        {isImportingMembers 
+                          ? 'Processing...' 
+                          : (memberFiles.length > 1 
+                              ? (locale === 'si' ? `ගොනු ${memberFiles.length}ක් ආයාත කරන්න` : `Import ${memberFiles.length} Files`) 
+                              : t('uploadBtn'))}
+                      </span>
                     </button>
                   </form>
+
+                  {/* SECTION A-2: DOWNLOAD REGISTERED MEMBERS BY FILE */}
+                  <div className="pt-4 border-t border-neutral-100 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-800">
+                        <FileSpreadsheet className="w-4 h-4 text-[#003399]" />
+                        <span>{locale === 'si' ? 'ගොනුව අනුව සාමාජික නාමාවලිය බාගන්න:' : 'Download Registered Members by File:'}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                      <SearchableFileSelect
+                        files={uploadedMemberFiles}
+                        selectedFile={selectedMemberDownloadFile}
+                        onSelect={setSelectedMemberDownloadFile}
+                        totalCount={liveStats.membersCount}
+                        theme="blue"
+                        isSinhala={locale === 'si'}
+                        className="flex-1 min-w-0"
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => handleAdminDownloadMemberCsv()}
+                        className="px-3.5 py-2 rounded-xl bg-[#003399] hover:bg-[#002266] text-white text-xs font-bold transition-colors cursor-pointer shadow-2xs flex items-center justify-center gap-1.5 shrink-0 whitespace-nowrap active:scale-98"
+                      >
+                        <Download className="w-3.5 h-3.5 shrink-0" />
+                        <span>{locale === 'si' ? 'බාගන්න (CSV)' : 'Download (CSV)'}</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Helper Schema Snippet & Template Download */}
@@ -2031,19 +2205,34 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
                     {/* File Input */}
                     <div className="space-y-1.5">
                       <label className="block text-xs font-bold text-neutral-700">
-                        {locale === 'si' ? 'ඡන්ද හිමි නාමලේඛන ගොනුව (CSV / Text)' : 'Select Electoral Register File (CSV / Text)'}
+                        {locale === 'si' ? 'ඡන්ද හිමි නාමලේඛන CSV ගොනු තෝරන්න (එක් ගොනුවක් හෝ කිහිපයක්)' : 'Select Electoral Register File(s) (One or More CSVs)'}
                       </label>
                       <input
                         type="file"
                         accept=".csv,.txt,.tsv"
+                        multiple
                         required
-                        onChange={e => setVoterFile(e.target.files?.[0] || null)}
+                        onChange={e => {
+                          if (e.target.files) {
+                            setVoterFiles(Array.from(e.target.files));
+                          }
+                        }}
                         className="w-full text-xs text-neutral-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-neutral-700 hover:file:bg-slate-200 cursor-pointer border border-neutral-200 rounded-xl p-2 bg-slate-50"
                       />
+                      {voterFiles.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {voterFiles.map((f, i) => (
+                            <span key={i} className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-mono">
+                              <FileSpreadsheet className="w-3 h-3 text-emerald-600" />
+                              {f.name} ({(f.size / 1024).toFixed(1)} KB)
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     {/* Mode Radio */}
-                    <div className="flex items-center gap-4 text-xs text-neutral-700">
+                    <div className="flex flex-wrap items-center gap-4 text-xs text-neutral-700">
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input
                           type="radio"
@@ -2054,6 +2243,17 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
                           className="text-emerald-700"
                         />
                         <span>{t('modeAppend')}</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="voterMode"
+                          value="replace_file"
+                          checked={voterMode === 'replace_file'}
+                          onChange={() => setVoterMode('replace_file')}
+                          className="text-emerald-700"
+                        />
+                        <span>{locale === 'si' ? 'මෙම ගොනුවේ දත්ත පමණක් ප්‍රතිස්ථාපනය' : 'Replace matching file(s) only'}</span>
                       </label>
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input
@@ -2070,13 +2270,50 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
 
                     <button
                       type="submit"
-                      disabled={isUploadingVoters || !voterFile}
+                      disabled={isUploadingVoters || voterFiles.length === 0}
                       className="w-full py-2.5 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition-colors cursor-pointer shadow-xs disabled:opacity-50 flex items-center justify-center gap-2"
                     >
                       <Upload className={`w-3.5 h-3.5 ${isUploadingVoters ? 'animate-bounce' : ''}`} />
-                      <span>{isUploadingVoters ? 'Processing...' : t('uploadBtn')}</span>
+                      <span>
+                        {isUploadingVoters 
+                          ? 'Processing...' 
+                          : (voterFiles.length > 1 
+                              ? (locale === 'si' ? `ගොනු ${voterFiles.length}ක් උඩුගත කර සකසන්න` : `Upload & Process ${voterFiles.length} Files`) 
+                              : t('uploadBtn'))}
+                      </span>
                     </button>
                   </form>
+
+                  {/* SECTION B-2: DOWNLOAD ELECTIVE MEMBERS BY FILE */}
+                  <div className="pt-4 border-t border-neutral-100 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-800">
+                        <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
+                        <span>{locale === 'si' ? 'ගොනුව අනුව ඡන්ද හිමි නාමලේඛනය බාගන්න:' : 'Download Elective Members by File:'}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                      <SearchableFileSelect
+                        files={uploadedVoterFiles}
+                        selectedFile={selectedDownloadFile}
+                        onSelect={setSelectedDownloadFile}
+                        totalCount={liveStats.votersCount}
+                        theme="emerald"
+                        isSinhala={locale === 'si'}
+                        className="flex-1 min-w-0"
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => handleAdminDownloadVoterCsv()}
+                        className="px-3.5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition-colors cursor-pointer shadow-2xs flex items-center justify-center gap-1.5 shrink-0 whitespace-nowrap active:scale-98"
+                      >
+                        <Download className="w-3.5 h-3.5 shrink-0" />
+                        <span>{locale === 'si' ? 'බාගන්න (CSV)' : 'Download (CSV)'}</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Helper Schema Snippet & Template Download */}
@@ -3765,7 +4002,7 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
               <div className="p-4 rounded-2xl bg-slate-50 border border-neutral-200/90 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
-                    <Sparkles className="w-4 h-4 text-[#003399]" />
+                    <UserIcon className="w-4 h-4 text-[#003399]" />
                     <span className="text-xs font-bold text-neutral-900">
                       {locale === 'si' ? 'පණිවිඩයට පිළිතුරු සපයන්න (Reply to Customer)' : 'Reply to Customer'}
                     </span>

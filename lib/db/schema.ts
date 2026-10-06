@@ -73,6 +73,7 @@ export const SCHEMA_DEFINITIONS = {
       full_name VARCHAR(255) NOT NULL,
       nic VARCHAR(50),
       division VARCHAR(100),
+      location VARCHAR(150),
       uploaded_at TIMESTAMPTZ DEFAULT NOW()
     );
   `,
