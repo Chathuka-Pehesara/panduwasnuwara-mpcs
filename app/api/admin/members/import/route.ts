@@ -148,44 +148,77 @@ export async function POST(req: NextRequest) {
   try {
     await initDatabaseSchema();
     const contentType = req.headers.get('content-type') || '';
-    let records: MemberRecord[] = [];
-    let mode: 'append' | 'replace' = 'append';
+    let mode: 'append' | 'replace' | 'replace_file' = 'append';
+
+    let totalImported = 0;
+    const processedFiles: string[] = [];
 
     if (contentType.includes('multipart/form-data')) {
       const formData = await req.formData();
-      const file = formData.get('file') as File | null;
-      mode = (formData.get('mode') as 'append' | 'replace') || 'append';
+      mode = (formData.get('mode') as 'append' | 'replace' | 'replace_file') || 'append';
 
-      if (!file) {
-        return NextResponse.json({ success: false, error: 'No file provided' }, { status: 400 });
+      const fileList: File[] = [];
+      const multi = formData.getAll('files') as File[];
+      if (multi && multi.length > 0) {
+        fileList.push(...multi.filter(f => f && typeof f.name === 'string' && f.size > 0));
+      }
+      const single = formData.get('file') as File | null;
+      if (single && typeof single.name === 'string' && single.size > 0 && !fileList.some(f => f.name === single.name)) {
+        fileList.push(single);
       }
 
-      const fileText = await file.text();
-      records = parseMemberCsv(fileText);
+      if (fileList.length === 0) {
+        return NextResponse.json({ success: false, error: 'No files provided for upload.' }, { status: 400 });
+      }
+
+      let isFirstFile = true;
+      for (const file of fileList) {
+        const fileText = await file.text();
+        const records = parseMemberCsv(fileText);
+
+        if (records.length > 0) {
+          const fileMode = mode === 'replace' ? (isFirstFile ? 'replace' : 'append') : mode;
+          await importMembers(records, fileMode, file.name);
+          totalImported += records.length;
+          processedFiles.push(file.name);
+          isFirstFile = false;
+        }
+      }
     } else {
       const body = await req.json();
       mode = body.mode || 'append';
+      const fileName = body.fileName || body.file_name || 'members_register.csv';
+      let records: MemberRecord[] = [];
       if (Array.isArray(body.records)) {
         records = body.records;
       } else if (typeof body.csvText === 'string') {
         records = parseMemberCsv(body.csvText);
       }
+
+      if (records.length > 0) {
+        await importMembers(records, mode, fileName);
+        totalImported += records.length;
+        processedFiles.push(fileName);
+      }
     }
 
-    if (records.length === 0) {
+    if (totalImported === 0) {
       return NextResponse.json({
         success: false,
-        error: 'No valid member records found in the provided file. Ensure columns contain member details.'
+        error: 'No valid member records found in the provided CSV file(s).'
       }, { status: 400 });
     }
 
-    const totalCount = await importMembers(records, mode);
+    const { getLiveStats } = await import('@/lib/models/stats');
+    const stats = await getLiveStats();
 
     return NextResponse.json({
       success: true,
-      importedCount: records.length,
-      totalCount,
-      message: `Successfully imported ${records.length} members.`
+      importedCount: totalImported,
+      filesCount: processedFiles.length,
+      files: processedFiles,
+      totalCount: stats.membersCount,
+      message: `Successfully imported ${totalImported} members from ${processedFiles.join(', ')}.`
     });
   } catch (err) {
     console.error('Error importing members:', err);
