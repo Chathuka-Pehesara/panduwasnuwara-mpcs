@@ -56,7 +56,8 @@ function parseVoterCsv(text: string): VoterRecord[] {
     address: 3,
     postalAddress: 4,
     gender: 5,
-    division: -1
+    division: -1,
+    location: -1
   };
 
   if (hasHeader) {
@@ -67,7 +68,8 @@ function parseVoterCsv(text: string): VoterRecord[] {
       address: rawHeaders.findIndex(h => h === 'address' || (h.includes('address') && !h.includes('postal'))),
       postalAddress: rawHeaders.findIndex(h => h.includes('postal') || h.includes('postaddress') || h.includes('mailing')),
       gender: rawHeaders.findIndex(h => h.includes('gender') || h.includes('sex')),
-      division: rawHeaders.findIndex(h => h.includes('division') || h.includes('polling') || h.includes('area') || h.includes('ward'))
+      division: rawHeaders.findIndex(h => h.includes('division') || h.includes('polling') || h.includes('ward')),
+      location: rawHeaders.findIndex(h => h.includes('location') || h.includes('district') || h.includes('city') || h.includes('area') || h.includes('town'))
     };
 
     if (colMap.fullName === -1) {
@@ -90,6 +92,7 @@ function parseVoterCsv(text: string): VoterRecord[] {
     let postalAddress = '';
     let gender = '';
     let division = '';
+    let location = '';
 
     if (hasHeader) {
       if (colMap.voterNumber !== -1 && parts[colMap.voterNumber]) {
@@ -102,9 +105,10 @@ function parseVoterCsv(text: string): VoterRecord[] {
       if (colMap.postalAddress !== -1 && parts[colMap.postalAddress]) postalAddress = parts[colMap.postalAddress];
       if (colMap.gender !== -1 && parts[colMap.gender]) gender = parts[colMap.gender];
       if (colMap.division !== -1 && parts[colMap.division]) division = parts[colMap.division];
+      if (colMap.location !== -1 && parts[colMap.location]) location = parts[colMap.location];
     } else {
-      // Positional exact format: Member Number, NIC, FULL NAME, ADDRESS, POSTAL ADDRESS, GENDER
-      if (parts.length >= 6) {
+      // Positional exact format: Member Number, NIC, FULL NAME, ADDRESS, POSTAL ADDRESS, GENDER, (LOCATION/DIVISION)
+      if (parts.length >= 7) {
         voterNumber = parts[0];
         memberNumber = parts[0];
         nic = parts[1];
@@ -112,7 +116,16 @@ function parseVoterCsv(text: string): VoterRecord[] {
         address = parts[3];
         postalAddress = parts[4];
         gender = parts[5];
-        if (parts.length >= 7) division = parts[6];
+        location = parts[6];
+        division = parts[6];
+      } else if (parts.length === 6) {
+        voterNumber = parts[0];
+        memberNumber = parts[0];
+        nic = parts[1];
+        fullName = parts[2];
+        address = parts[3];
+        postalAddress = parts[4];
+        gender = parts[5];
       } else if (parts.length === 5) {
         voterNumber = parts[0];
         memberNumber = parts[0];
@@ -140,7 +153,7 @@ function parseVoterCsv(text: string): VoterRecord[] {
     }
 
     if (fullName) {
-      records.push({ voterNumber, memberNumber, nic, fullName, address, postalAddress, gender, division });
+      records.push({ voterNumber, memberNumber, nic, fullName, address, postalAddress, gender, division, location });
     }
   }
 
@@ -155,47 +168,81 @@ export async function POST(req: NextRequest) {
   try {
     await initDatabaseSchema();
     const contentType = req.headers.get('content-type') || '';
-    let records: VoterRecord[] = [];
-    let mode: 'append' | 'replace' = 'append';
+    let mode: 'append' | 'replace' | 'replace_file' = 'append';
+
+    let totalUploaded = 0;
+    const processedFiles: string[] = [];
 
     if (contentType.includes('multipart/form-data')) {
       const formData = await req.formData();
-      const file = formData.get('file') as File | null;
-      mode = (formData.get('mode') as 'append' | 'replace') || 'append';
+      mode = (formData.get('mode') as 'append' | 'replace' | 'replace_file') || 'append';
 
-      if (!file) {
-        return NextResponse.json({ success: false, error: 'No file provided' }, { status: 400 });
+      const fileList: File[] = [];
+      const multi = formData.getAll('files') as File[];
+      if (multi && multi.length > 0) {
+        fileList.push(...multi.filter(f => f && typeof f.name === 'string' && f.size > 0));
+      }
+      const single = formData.get('file') as File | null;
+      if (single && typeof single.name === 'string' && single.size > 0 && !fileList.some(f => f.name === single.name)) {
+        fileList.push(single);
       }
 
-      const fileText = await file.text();
-      records = parseVoterCsv(fileText);
+      if (fileList.length === 0) {
+        return NextResponse.json({ success: false, error: 'No files provided for upload.' }, { status: 400 });
+      }
+
+      // If user selected total replace, clear the whole table first before inserting from the files
+      let isFirstFile = true;
+      for (const file of fileList) {
+        const fileText = await file.text();
+        const records = parseVoterCsv(fileText);
+
+        if (records.length > 0) {
+          const fileMode = mode === 'replace' ? (isFirstFile ? 'replace' : 'append') : mode;
+          await uploadEligibleVoters(records, fileMode, file.name);
+          totalUploaded += records.length;
+          processedFiles.push(file.name);
+          isFirstFile = false;
+        }
+      }
     } else {
       const body = await req.json();
       mode = body.mode || 'append';
+      const fileName = body.fileName || body.file_name || 'electoral_register.csv';
+      let records: VoterRecord[] = [];
       if (Array.isArray(body.records)) {
         records = body.records;
       } else if (typeof body.csvText === 'string') {
         records = parseVoterCsv(body.csvText);
       }
+
+      if (records.length > 0) {
+        await uploadEligibleVoters(records, mode, fileName);
+        totalUploaded += records.length;
+        processedFiles.push(fileName);
+      }
     }
 
-    if (records.length === 0) {
+    if (totalUploaded === 0) {
       return NextResponse.json({
         success: false,
-        error: 'No valid voter records found in the uploaded electoral register.'
+        error: 'No valid voter records found in the uploaded CSV file(s).'
       }, { status: 400 });
     }
 
-    const totalCount = await uploadEligibleVoters(records, mode);
+    const { getLiveStats } = await import('@/lib/models/stats');
+    const stats = await getLiveStats();
 
     return NextResponse.json({
       success: true,
-      uploadedCount: records.length,
-      totalCount,
-      message: `Successfully processed ${records.length} eligible voters.`
+      uploadedCount: totalUploaded,
+      filesCount: processedFiles.length,
+      files: processedFiles,
+      totalCount: stats.votersCount,
+      message: `Successfully processed ${totalUploaded} eligible voters from ${processedFiles.join(', ')}.`
     });
   } catch (err) {
-    console.error('Error uploading electoral register:', err);
+    console.error('Error uploading electoral register files:', err);
     return NextResponse.json({ success: false, error: 'Failed to upload electoral register' }, { status: 500 });
   }
 }

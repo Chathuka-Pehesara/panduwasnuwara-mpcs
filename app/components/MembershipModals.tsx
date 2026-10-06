@@ -22,9 +22,11 @@ import {
   FileCheck,
   Loader2,
   FileSpreadsheet,
-  Info
+  Info,
+  Download,
 } from 'lucide-react';
 import { useMembership } from '@/app/context/MembershipContext';
+import SearchableFileSelect from './SearchableFileSelect';
 
 export default function MembershipModals() {
   const { activeModal, closeModal, auth } = useMembership();
@@ -39,7 +41,7 @@ export default function MembershipModals() {
         aria-hidden="true" 
       />
 
-      <div className="relative w-full max-w-4xl bg-white border border-neutral-200/90 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden z-10 my-auto text-neutral-900 flex flex-col max-h-[90vh]">
+      <div className="relative w-full max-w-5xl xl:max-w-6xl bg-white border border-neutral-200/90 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden z-10 my-auto text-neutral-900 flex flex-col max-h-[90vh]">
         {activeModal === 'members' && <MemberDetailsModal onClose={closeModal} />}
         {activeModal === 'voters' && <EligibleVotersModal onClose={closeModal} />}
         {activeModal === 'apply' && <ApplyMembershipModal onClose={closeModal} auth={auth} />}
@@ -55,16 +57,35 @@ function MemberDetailsModal({ onClose }: { onClose: () => void }) {
   const locale = useLocale();
   const isSi = locale === 'si';
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedFile, setSelectedFile] = useState<string>('all');
+  const [memberFiles, setMemberFiles] = useState<{ fileName: string; displayName: string; count: number }[]>([]);
   const [members, setMembers] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchMembers = async (search = '', pageNum = 1) => {
+  // Load distinct uploaded member files
+  useEffect(() => {
+    const fetchMemberFiles = async () => {
+      try {
+        const res = await fetch('/api/members/files');
+        const data = await res.json();
+        if (data.success && Array.isArray(data.files)) {
+          setMemberFiles(data.files);
+        }
+      } catch (err) {
+        console.error('Error fetching member files:', err);
+      }
+    };
+    fetchMemberFiles();
+  }, []);
+
+  const fetchMembers = async (search = '', pageNum = 1, file = selectedFile) => {
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/membership/members?q=${encodeURIComponent(search)}&page=${pageNum}&limit=25`);
+      const fileParam = file && file !== 'all' ? `&file=${encodeURIComponent(file)}` : '';
+      const res = await fetch(`/api/membership/members?q=${encodeURIComponent(search)}&page=${pageNum}&limit=25${fileParam}`);
       const data = await res.json();
       if (data.success) {
         setMembers(data.members || []);
@@ -81,14 +102,24 @@ function MemberDetailsModal({ onClose }: { onClose: () => void }) {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      fetchMembers(searchTerm, 1);
+      fetchMembers(searchTerm, 1, selectedFile);
     }, 300);
     return () => clearTimeout(timer);
-  }, [searchTerm]);
+  }, [searchTerm, selectedFile]);
+
+  const handleFileChange = (file: string) => {
+    setSelectedFile(file);
+    setPage(1);
+  };
 
   const handlePageChange = (newPage: number) => {
     if (newPage < 1 || newPage > totalPages) return;
-    fetchMembers(searchTerm, newPage);
+    fetchMembers(searchTerm, newPage, selectedFile);
+  };
+
+  const handleDownloadCsv = () => {
+    const url = `/api/members/download?file=${encodeURIComponent(selectedFile)}`;
+    window.open(url, '_blank');
   };
 
   return (
@@ -101,7 +132,7 @@ function MemberDetailsModal({ onClose }: { onClose: () => void }) {
           </div>
           <div>
             <h3 className="text-lg sm:text-xl font-bold text-neutral-900 flex items-center gap-2 font-condensed">
-              <span>{isSi ? 'සාමාජික විස්තර (සියල්ල)' : 'Member Details (ALL)'}</span>
+              <span>{isSi ? 'සාමාජික විස්තර (සියලු සාමාජිකයන්)' : 'Member Details (All Members)'}</span>
               <span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-50 text-[#003399] font-mono font-bold border border-blue-200">
                 {total.toLocaleString()} {isSi ? 'සාමාජිකයන්' : 'Members'}
               </span>
@@ -123,25 +154,54 @@ function MemberDetailsModal({ onClose }: { onClose: () => void }) {
         </button>
       </div>
 
-      {/* Search Bar */}
-      <div className="p-4 sm:p-6 border-b border-neutral-200/80 bg-slate-50/50 shrink-0">
-        <div className="relative">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder={isSi ? 'නම, ජාතික හැඳුනුම්පත හෝ සාමාජික අංකය මගින් සොයන්න...' : 'Search by Name, NIC, or Member Number...'}
-            className="w-full pl-10 pr-10 py-2.5 bg-white border border-neutral-200 rounded-xl text-xs sm:text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-[#003399] focus:ring-1 focus:ring-[#003399] transition-all shadow-2xs"
+      {/* Filter Toolbar: Search, File Select, Download Button */}
+      <div className="p-4 sm:p-5 border-b border-neutral-200/80 bg-slate-50/50 shrink-0 space-y-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          {/* Search Bar */}
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder={isSi ? 'නම, හැඳුනුම්පත, සාමාජික අංකය හෝ ගොනුව සොයන්න...' : 'Search by Name, NIC, Member No, or File...'}
+              className="w-full pl-10 pr-10 py-2.5 bg-white border border-neutral-200 rounded-xl text-xs sm:text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-[#003399] focus:ring-1 focus:ring-[#003399] transition-all shadow-2xs"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Searchable File Selector */}
+          <SearchableFileSelect
+            files={memberFiles}
+            selectedFile={selectedFile}
+            onSelect={handleFileChange}
+            totalCount={total}
+            isSinhala={isSi}
+            theme="blue"
+            className="w-full sm:w-64 shrink-0"
           />
-          {searchTerm && (
-            <button
-              onClick={() => setSearchTerm('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
+
+          {/* Download CSV Button */}
+          <button
+            onClick={handleDownloadCsv}
+            type="button"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#003399] hover:bg-[#002266] text-white text-xs sm:text-sm font-bold shadow-2xs cursor-pointer transition-all shrink-0 active:scale-98"
+            title={isSi ? 'සාමාජික නාමාවලිය බාගන්න (CSV)' : 'Download Members Directory CSV'}
+          >
+            <Download className="w-4 h-4" />
+            <span>
+              {isSi 
+                ? (selectedFile !== 'all' ? `${selectedFile} බාගන්න` : 'CSV බාගන්න') 
+                : (selectedFile !== 'all' ? `Download ${selectedFile}` : 'Download (CSV)')}
+            </span>
+          </button>
         </div>
       </div>
 
@@ -161,7 +221,7 @@ function MemberDetailsModal({ onClose }: { onClose: () => void }) {
             <p className="text-xs text-neutral-400 max-w-sm mx-auto">
               {searchTerm 
                 ? (isSi ? 'සෙවුම් පදය වෙනස් කර නැවත උත්සාහ කරන්න.' : 'Try changing your search terms.') 
-                : (isSi ? 'දැනට සාමාජික දත්ත පද්ධතියට ඇතුළත් කර නොමැත.' : 'No member records have been imported yet.')}
+                : (isSi ? 'තෝරාගත් ගොනුව සඳහා සාමාජික දත්ත හමු නොවීය.' : 'No member records found for the selected file.')}
             </p>
           </div>
         ) : (
@@ -172,8 +232,11 @@ function MemberDetailsModal({ onClose }: { onClose: () => void }) {
                   <tr>
                     <th className="py-3 px-4">{isSi ? 'සාමාජික අංකය' : 'Member No'}</th>
                     <th className="py-3 px-4">{isSi ? 'සම්පූර්ණ නම' : 'Full Name'}</th>
-                    <th className="py-3 px-4">{isSi ? 'ජාතික හැඳුනුම්පත' : 'NIC Number'}</th>
-                    <th className="py-3 px-4">{isSi ? 'දුරකථන අංකය' : 'Phone'}</th>
+                    <th className="py-3 px-4">{isSi ? 'ජාතික හැඳුනුම්පත' : 'NIC'}</th>
+                    <th className="py-3 px-4">{isSi ? 'ලිපිනය' : 'Address'}</th>
+                    <th className="py-3 px-4">{isSi ? 'තැපැල් ලිපිනය' : 'Postal Address'}</th>
+                    <th className="py-3 px-4">{isSi ? 'ස්ත්‍රී / පුරුෂ' : 'Gender'}</th>
+                    <th className="py-3 px-4">{isSi ? 'දුරකථනය' : 'Phone'}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-100 font-normal text-neutral-800">
@@ -183,10 +246,23 @@ function MemberDetailsModal({ onClose }: { onClose: () => void }) {
                         {m.member_number || m.memberNumber || '—'}
                       </td>
                       <td className="py-3 px-4 font-semibold text-neutral-900">
-                        {m.full_name || m.fullName}
+                        {m.full_name || m.fullName || '—'}
                       </td>
                       <td className="py-3 px-4 font-mono text-neutral-600">
                         {m.nic || '—'}
+                      </td>
+                      <td className="py-3 px-4 text-neutral-700 max-w-[200px] truncate" title={m.address || ''}>
+                        {m.address || '—'}
+                      </td>
+                      <td className="py-3 px-4 text-neutral-600 max-w-[200px] truncate" title={m.postal_address || m.postalAddress || ''}>
+                        {m.postal_address || m.postalAddress || '—'}
+                      </td>
+                      <td className="py-3 px-4 text-neutral-700">
+                        {m.gender ? (
+                          <span className="px-2 py-0.5 rounded-md bg-slate-100 text-neutral-700 text-xs font-semibold">
+                            {m.gender}
+                          </span>
+                        ) : '—'}
                       </td>
                       <td className="py-3 px-4 text-neutral-600">
                         {m.phone || '—'}
@@ -237,16 +313,41 @@ function EligibleVotersModal({ onClose }: { onClose: () => void }) {
   const locale = useLocale();
   const isSi = locale === 'si';
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedFile, setSelectedFile] = useState<string>('all');
+  const [voterFiles, setVoterFiles] = useState<{ fileName: string; displayName: string; count: number }[]>([]);
   const [voters, setVoters] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchVoters = async (search = '', pageNum = 1) => {
+  // Load distinct uploaded files
+  useEffect(() => {
+    const fetchVoterFiles = async () => {
+      try {
+        const res = await fetch('/api/voters/locations');
+        const data = await res.json();
+        if (data.success && Array.isArray(data.files)) {
+          setVoterFiles(data.files);
+        } else if (data.success && Array.isArray(data.locations)) {
+          setVoterFiles(data.locations.map((l: any) => ({
+            fileName: l.fileName || `${l.location}.csv`,
+            displayName: l.location,
+            count: l.count
+          })));
+        }
+      } catch (err) {
+        console.error('Error fetching voter files:', err);
+      }
+    };
+    fetchVoterFiles();
+  }, []);
+
+  const fetchVoters = async (search = '', pageNum = 1, file = selectedFile) => {
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/membership/voters?q=${encodeURIComponent(search)}&page=${pageNum}&limit=25`);
+      const fileParam = file && file !== 'all' ? `&file=${encodeURIComponent(file)}` : '';
+      const res = await fetch(`/api/membership/voters?q=${encodeURIComponent(search)}&page=${pageNum}&limit=25${fileParam}`);
       const data = await res.json();
       if (data.success) {
         setVoters(data.voters || []);
@@ -263,14 +364,24 @@ function EligibleVotersModal({ onClose }: { onClose: () => void }) {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      fetchVoters(searchTerm, 1);
+      fetchVoters(searchTerm, 1, selectedFile);
     }, 300);
     return () => clearTimeout(timer);
-  }, [searchTerm]);
+  }, [searchTerm, selectedFile]);
+
+  const handleFileChange = (file: string) => {
+    setSelectedFile(file);
+    setPage(1);
+  };
 
   const handlePageChange = (newPage: number) => {
     if (newPage < 1 || newPage > totalPages) return;
-    fetchVoters(searchTerm, newPage);
+    fetchVoters(searchTerm, newPage, selectedFile);
+  };
+
+  const handleDownloadCsv = () => {
+    const url = `/api/voters/download?file=${encodeURIComponent(selectedFile)}`;
+    window.open(url, '_blank');
   };
 
   return (
@@ -305,25 +416,54 @@ function EligibleVotersModal({ onClose }: { onClose: () => void }) {
         </button>
       </div>
 
-      {/* Search Bar */}
-      <div className="p-4 sm:p-6 border-b border-neutral-200/80 bg-slate-50/50 shrink-0">
-        <div className="relative">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder={isSi ? 'නම, ජාතික හැඳුනුම්පත, ඡන්ද අංකය හෝ කොට්ඨාසය මගින් සොයන්න...' : 'Search by Name, NIC, Voter No, or Division...'}
-            className="w-full pl-10 pr-10 py-2.5 bg-white border border-neutral-200 rounded-xl text-xs sm:text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-[#003399] focus:ring-1 focus:ring-[#003399] transition-all shadow-2xs"
+      {/* Filter Toolbar: Search, File Select, Download Button */}
+      <div className="p-4 sm:p-5 border-b border-neutral-200/80 bg-slate-50/50 shrink-0 space-y-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          {/* Search Bar */}
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder={isSi ? 'නම, හැඳුනුම්පත, ඡන්ද අංකය හෝ ගොනුව සොයන්න...' : 'Search by Name, NIC, Voter No, or File...'}
+              className="w-full pl-10 pr-10 py-2.5 bg-white border border-neutral-200 rounded-xl text-xs sm:text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:border-[#003399] focus:ring-1 focus:ring-[#003399] transition-all shadow-2xs"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Searchable File Selector */}
+          <SearchableFileSelect
+            files={voterFiles}
+            selectedFile={selectedFile}
+            onSelect={handleFileChange}
+            totalCount={total}
+            isSinhala={isSi}
+            theme="blue"
+            className="w-full sm:w-64 shrink-0"
           />
-          {searchTerm && (
-            <button
-              onClick={() => setSearchTerm('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
+
+          {/* Download CSV Button */}
+          <button
+            onClick={handleDownloadCsv}
+            type="button"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#003399] hover:bg-[#002266] text-white text-xs sm:text-sm font-bold shadow-2xs cursor-pointer transition-all shrink-0 active:scale-98"
+            title={isSi ? 'තෝරාගත් ගොනුවේ ඡන්ද හිමි නාමලේඛනය බාගන්න' : 'Download Electoral Register CSV'}
+          >
+            <Download className="w-4 h-4" />
+            <span>
+              {isSi 
+                ? (selectedFile !== 'all' ? `${selectedFile} බාගන්න` : 'CSV බාගන්න') 
+                : (selectedFile !== 'all' ? `Download ${selectedFile}` : 'Download (CSV)')}
+            </span>
+          </button>
         </div>
       </div>
 
@@ -343,7 +483,7 @@ function EligibleVotersModal({ onClose }: { onClose: () => void }) {
             <p className="text-xs text-neutral-400 max-w-sm mx-auto">
               {searchTerm 
                 ? (isSi ? 'සෙවුම් පදය වෙනස් කර නැවත උත්සාහ කරන්න.' : 'Try changing your search terms.') 
-                : (isSi ? 'දැනට ඡන්ද හිමි නාමලේඛනය උඩුගත කර නොමැත.' : 'No voter register data has been uploaded yet.')}
+                : (isSi ? 'තෝරාගත් ගොනුව සඳහා ඡන්ද හිමි නාමලේඛනයක් හමු නොවීය.' : 'No voters found for the selected file.')}
             </p>
           </div>
         ) : (
@@ -352,28 +492,38 @@ function EligibleVotersModal({ onClose }: { onClose: () => void }) {
               <table className="w-full text-left text-xs sm:text-sm">
                 <thead className="bg-slate-50 text-neutral-600 uppercase text-[11px] font-bold tracking-wider border-b border-neutral-200">
                   <tr>
-                    <th className="py-3 px-4">{isSi ? 'ඡන්ද අංකය' : 'Voter No'}</th>
+                    <th className="py-3 px-4">{isSi ? 'ඡන්ද / සාමාජික අංකය' : 'Voter No'}</th>
                     <th className="py-3 px-4">{isSi ? 'සම්පූර්ණ නම' : 'Full Name'}</th>
-                    <th className="py-3 px-4">{isSi ? 'ජාතික හැඳුනුම්පත' : 'NIC Number'}</th>
-                    <th className="py-3 px-4">{isSi ? 'කොට්ඨාසය / ශාඛාව' : 'Division'}</th>
+                    <th className="py-3 px-4">{isSi ? 'ජාතික හැඳුනුම්පත' : 'NIC'}</th>
+                    <th className="py-3 px-4">{isSi ? 'ලිපිනය' : 'Address'}</th>
+                    <th className="py-3 px-4">{isSi ? 'තැපැල් ලිපිනය' : 'Postal Address'}</th>
+                    <th className="py-3 px-4">{isSi ? 'ස්ත්‍රී / පුරුෂ' : 'Gender'}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-100 font-normal text-neutral-800">
                   {voters.map((v, idx) => (
                     <tr key={v.id || idx} className="hover:bg-slate-50/80 transition-colors">
                       <td className="py-3 px-4 font-mono font-bold text-[#003399]">
-                        {v.voter_number || v.voterNumber || '—'}
+                        {v.voter_number || v.member_number || v.voterNumber || '—'}
                       </td>
                       <td className="py-3 px-4 font-semibold text-neutral-900">
-                        {v.full_name || v.fullName}
+                        {v.full_name || v.fullName || '—'}
                       </td>
                       <td className="py-3 px-4 font-mono text-neutral-600">
                         {v.nic || '—'}
                       </td>
-                      <td className="py-3 px-4 text-neutral-600">
-                        <span className="inline-block px-2.5 py-0.5 rounded-md bg-slate-100 border border-neutral-200 text-neutral-700 text-xs font-medium">
-                          {v.division || '—'}
-                        </span>
+                      <td className="py-3 px-4 text-neutral-700 max-w-[220px] truncate" title={v.address || ''}>
+                        {v.address || '—'}
+                      </td>
+                      <td className="py-3 px-4 text-neutral-600 max-w-[220px] truncate" title={v.postal_address || v.postalAddress || ''}>
+                        {v.postal_address || v.postalAddress || '—'}
+                      </td>
+                      <td className="py-3 px-4 text-neutral-700">
+                        {v.gender ? (
+                          <span className="px-2 py-0.5 rounded-md bg-slate-100 text-neutral-700 text-xs font-semibold">
+                            {v.gender}
+                          </span>
+                        ) : '—'}
                       </td>
                     </tr>
                   ))}
