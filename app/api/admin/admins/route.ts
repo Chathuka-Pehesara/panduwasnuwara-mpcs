@@ -93,7 +93,7 @@ export async function PUT(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { id, fullName, nic, phone, password, role } = body;
+    const { id, fullName, nic, phone, role } = body;
 
     if (!id) {
       return NextResponse.json({ success: false, error: 'Admin user ID required' }, { status: 400 });
@@ -113,7 +113,6 @@ export async function PUT(req: NextRequest) {
       fullName,
       nic,
       phone,
-      password: password && password.trim().length > 0 ? password.trim() : undefined,
       role: role ? (role === 'superadmin' ? 'superadmin' : 'admin') : undefined
     });
 
