@@ -41,7 +41,7 @@ export default function MembershipModals() {
         aria-hidden="true" 
       />
 
-      <div className="relative w-full max-w-4xl bg-white border border-neutral-200/90 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden z-10 my-auto text-neutral-900 flex flex-col max-h-[90vh]">
+      <div className="relative w-full max-w-5xl xl:max-w-6xl bg-white border border-neutral-200/90 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden z-10 my-auto text-neutral-900 flex flex-col max-h-[90vh]">
         {activeModal === 'members' && <MemberDetailsModal onClose={closeModal} />}
         {activeModal === 'voters' && <EligibleVotersModal onClose={closeModal} />}
         {activeModal === 'apply' && <ApplyMembershipModal onClose={closeModal} auth={auth} />}
@@ -232,38 +232,53 @@ function MemberDetailsModal({ onClose }: { onClose: () => void }) {
                   <tr>
                     <th className="py-3 px-4">{isSi ? 'සාමාජික අංකය' : 'Member No'}</th>
                     <th className="py-3 px-4">{isSi ? 'සම්පූර්ණ නම' : 'Full Name'}</th>
-                    <th className="py-3 px-4">{isSi ? 'ජාතික හැඳුනුම්පත' : 'NIC Number'}</th>
+                    <th className="py-3 px-4">{isSi ? 'ජාතික හැඳුනුම්පත' : 'NIC'}</th>
+                    <th className="py-3 px-4">{isSi ? 'ලිපිනය' : 'Address'}</th>
+                    <th className="py-3 px-4">{isSi ? 'තැපැල් ලිපිනය' : 'Postal Address'}</th>
+                    <th className="py-3 px-4">{isSi ? 'ස්ත්‍රී / පුරුෂ' : 'Gender'}</th>
+                    <th className="py-3 px-4">{isSi ? 'දුරකථනය' : 'Phone'}</th>
                     <th className="py-3 px-4">{isSi ? 'ලේඛන ගොනුව' : 'File Name'}</th>
-                    <th className="py-3 px-4">{isSi ? 'දුරකථන අංකය' : 'Phone'}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-100 font-normal text-neutral-800">
-                  {members.map((m, idx) => (
-                    <tr key={m.id || idx} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3 px-4 font-mono font-bold text-[#003399]">
-                        {m.member_number || m.memberNumber || '—'}
-                      </td>
-                      <td className="py-3 px-4 font-semibold text-neutral-900">
-                        {m.full_name || m.fullName}
-                      </td>
-                      <td className="py-3 px-4 font-mono text-neutral-600">
-                        {m.nic || '—'}
-                      </td>
-                      <td className="py-3 px-4 text-neutral-700">
-                        {(m.file_name || m.fileName || m.location) ? (
+                  {members.map((m, idx) => {
+                    const fName = m.file_name || m.fileName || (m.location ? `${m.location}.csv` : 'general_members.csv');
+                    return (
+                      <tr key={m.id || idx} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-3 px-4 font-mono font-bold text-[#003399]">
+                          {m.member_number || m.memberNumber || '—'}
+                        </td>
+                        <td className="py-3 px-4 font-semibold text-neutral-900">
+                          {m.full_name || m.fullName || '—'}
+                        </td>
+                        <td className="py-3 px-4 font-mono text-neutral-600">
+                          {m.nic || '—'}
+                        </td>
+                        <td className="py-3 px-4 text-neutral-700 max-w-[180px] truncate" title={m.address || ''}>
+                          {m.address || '—'}
+                        </td>
+                        <td className="py-3 px-4 text-neutral-600 max-w-[180px] truncate" title={m.postal_address || m.postalAddress || ''}>
+                          {m.postal_address || m.postalAddress || '—'}
+                        </td>
+                        <td className="py-3 px-4 text-neutral-700">
+                          {m.gender ? (
+                            <span className="px-2 py-0.5 rounded-md bg-slate-100 text-neutral-700 text-xs font-semibold">
+                              {m.gender}
+                            </span>
+                          ) : '—'}
+                        </td>
+                        <td className="py-3 px-4 text-neutral-600">
+                          {m.phone || '—'}
+                        </td>
+                        <td className="py-3 px-4 text-neutral-700">
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-blue-50 border border-blue-200/80 text-[#003399] text-xs font-semibold font-mono">
                             <FileSpreadsheet className="w-3 h-3 text-[#003399]" />
-                            {m.file_name || m.fileName || (m.location ? `${m.location}.csv` : '—')}
+                            {fName}
                           </span>
-                        ) : (
-                          <span className="text-neutral-400 text-xs italic">—</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-neutral-600">
-                        {m.phone || '—'}
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -487,42 +502,51 @@ function EligibleVotersModal({ onClose }: { onClose: () => void }) {
               <table className="w-full text-left text-xs sm:text-sm">
                 <thead className="bg-slate-50 text-neutral-600 uppercase text-[11px] font-bold tracking-wider border-b border-neutral-200">
                   <tr>
-                    <th className="py-3 px-4">{isSi ? 'ඡන්ද අංකය' : 'Voter No'}</th>
+                    <th className="py-3 px-4">{isSi ? 'ඡන්ද / සාමාජික අංකය' : 'Voter No'}</th>
                     <th className="py-3 px-4">{isSi ? 'සම්පූර්ණ නම' : 'Full Name'}</th>
-                    <th className="py-3 px-4">{isSi ? 'ජාතික හැඳුනුම්පත' : 'NIC Number'}</th>
+                    <th className="py-3 px-4">{isSi ? 'ජාතික හැඳුනුම්පත' : 'NIC'}</th>
+                    <th className="py-3 px-4">{isSi ? 'ලිපිනය' : 'Address'}</th>
+                    <th className="py-3 px-4">{isSi ? 'තැපැල් ලිපිනය' : 'Postal Address'}</th>
+                    <th className="py-3 px-4">{isSi ? 'ස්ත්‍රී / පුරුෂ' : 'Gender'}</th>
                     <th className="py-3 px-4">{isSi ? 'ලේඛන ගොනුව' : 'File Name'}</th>
-                    <th className="py-3 px-4">{isSi ? 'කොට්ඨාසය / ශාඛාව' : 'Division'}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-100 font-normal text-neutral-800">
-                  {voters.map((v, idx) => (
-                    <tr key={v.id || idx} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3 px-4 font-mono font-bold text-[#003399]">
-                        {v.voter_number || v.member_number || v.voterNumber || '—'}
-                      </td>
-                      <td className="py-3 px-4 font-semibold text-neutral-900">
-                        {v.full_name || v.fullName}
-                      </td>
-                      <td className="py-3 px-4 font-mono text-neutral-600">
-                        {v.nic || '—'}
-                      </td>
-                      <td className="py-3 px-4 text-neutral-700">
-                        {(v.file_name || v.fileName || v.location) ? (
+                  {voters.map((v, idx) => {
+                    const fName = v.file_name || v.fileName || (v.location ? `${v.location}.csv` : 'general_register.csv');
+                    return (
+                      <tr key={v.id || idx} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-3 px-4 font-mono font-bold text-[#003399]">
+                          {v.voter_number || v.member_number || v.voterNumber || '—'}
+                        </td>
+                        <td className="py-3 px-4 font-semibold text-neutral-900">
+                          {v.full_name || v.fullName || '—'}
+                        </td>
+                        <td className="py-3 px-4 font-mono text-neutral-600">
+                          {v.nic || '—'}
+                        </td>
+                        <td className="py-3 px-4 text-neutral-700 max-w-[180px] truncate" title={v.address || ''}>
+                          {v.address || '—'}
+                        </td>
+                        <td className="py-3 px-4 text-neutral-600 max-w-[180px] truncate" title={v.postal_address || v.postalAddress || ''}>
+                          {v.postal_address || v.postalAddress || '—'}
+                        </td>
+                        <td className="py-3 px-4 text-neutral-700">
+                          {v.gender ? (
+                            <span className="px-2 py-0.5 rounded-md bg-slate-100 text-neutral-700 text-xs font-semibold">
+                              {v.gender}
+                            </span>
+                          ) : '—'}
+                        </td>
+                        <td className="py-3 px-4 text-neutral-700">
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-blue-50 border border-blue-200/80 text-[#003399] text-xs font-semibold font-mono">
                             <FileSpreadsheet className="w-3 h-3 text-[#003399]" />
-                            {v.file_name || v.fileName || (v.location ? `${v.location}.csv` : '—')}
+                            {fName}
                           </span>
-                        ) : (
-                          <span className="text-neutral-400 text-xs italic">—</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-neutral-600">
-                        <span className="inline-block px-2.5 py-0.5 rounded-md bg-slate-100 border border-neutral-200 text-neutral-700 text-xs font-medium">
-                          {v.division || '—'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

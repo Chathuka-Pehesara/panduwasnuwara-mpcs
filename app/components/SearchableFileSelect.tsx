@@ -100,8 +100,8 @@ export default function SearchableFileSelect({
   const badgeClass = isEmerald ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-[#003399]';
 
   const defaultAllText = isSinhala 
-    ? `සියලු ලේඛන / සම්පූර්ණ ලැයිස්තුව (${computedTotal.toLocaleString()})`
-    : `All Files / Complete List (${computedTotal.toLocaleString()})`;
+    ? `සියලු ගොනු (${computedTotal.toLocaleString()})`
+    : `All Files (${computedTotal.toLocaleString()})`;
 
   const resolvedAllLabel = allLabel || defaultAllText;
 
@@ -116,12 +116,12 @@ export default function SearchableFileSelect({
   };
 
   return (
-    <div ref={containerRef} className={`relative ${className}`}>
+    <div ref={containerRef} className={`relative w-full min-w-0 ${className}`}>
       {/* Trigger Button */}
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 bg-white border rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer shadow-2xs text-left ${
+        className={`w-full min-w-0 flex items-center justify-between gap-2 px-3 py-2 bg-white border rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer shadow-2xs text-left ${
           isOpen 
             ? `${isEmerald ? 'border-emerald-600 ring-2 ring-emerald-600/20' : 'border-[#003399] ring-2 ring-[#003399]/20'}` 
             : 'border-neutral-200 hover:border-neutral-300 hover:bg-slate-50/60'
@@ -129,24 +129,20 @@ export default function SearchableFileSelect({
         aria-expanded={isOpen}
         aria-haspopup="listbox"
       >
-        <div className="flex items-center gap-2 min-w-0 flex-1">
+        <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
           {selectedItem ? (
             <FileSpreadsheet className={`w-4 h-4 shrink-0 ${activeIconClass}`} />
           ) : (
             <Layers className="w-4 h-4 shrink-0 text-neutral-400" />
           )}
 
-          <span className="truncate text-neutral-900 font-mono text-xs sm:text-[13px]">
+          <span className="truncate text-neutral-900 font-mono text-xs sm:text-[13px] min-w-0">
             {selectedItem ? selectedItem.fileName : resolvedAllLabel}
           </span>
 
-          {selectedItem ? (
+          {selectedItem && (
             <span className={`text-[10px] sm:text-[11px] px-1.5 py-0.5 rounded-md font-sans font-bold shrink-0 ${badgeClass}`}>
               {selectedItem.count.toLocaleString()}
-            </span>
-          ) : (
-            <span className="text-[10px] sm:text-[11px] px-1.5 py-0.5 rounded-md font-sans font-bold bg-slate-100 text-neutral-600 shrink-0">
-              {files.length} {isSinhala ? 'ගොනු' : 'files'}
             </span>
           )}
         </div>
