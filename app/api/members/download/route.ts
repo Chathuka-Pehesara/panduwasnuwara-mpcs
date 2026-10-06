@@ -27,8 +27,7 @@ export async function GET(req: NextRequest) {
       'Address',
       'Postal Address',
       'Gender',
-      'Phone',
-      'File Name'
+      'Phone'
     ];
 
     const lines: string[] = [headers.join(',')];
@@ -41,8 +40,7 @@ export async function GET(req: NextRequest) {
         escapeCsvCell(row.address),
         escapeCsvCell(row.postal_address),
         escapeCsvCell(row.gender),
-        escapeCsvCell(row.phone),
-        escapeCsvCell(row.file_name)
+        escapeCsvCell(row.phone)
       ].join(',');
       lines.push(line);
     }
