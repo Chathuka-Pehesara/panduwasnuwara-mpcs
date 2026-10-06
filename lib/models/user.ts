@@ -70,15 +70,15 @@ export async function getAllUsers(): Promise<Omit<User, 'password'>[]> {
   return data as Omit<User, 'password'>[];
 }
 
-export async function getAllAdmins(): Promise<Omit<User, 'password'>[]> {
+export async function getAllAdmins(): Promise<User[]> {
   const { data, error } = await supabase
     .from('users')
-    .select('id, username, full_name, nic, phone, email, role, created_at')
+    .select('id, username, full_name, nic, phone, email, password, role, created_at')
     .in('role', ['admin', 'superadmin'])
     .order('created_at', { ascending: true });
 
   if (error || !data) return [];
-  return data as Omit<User, 'password'>[];
+  return data as User[];
 }
 
 export async function createUser(params: {

@@ -44,7 +44,6 @@ import {
   Send,
   Copy,
   RotateCcw,
-  Sparkles,
   FileCheck,
   LayoutDashboard,
   Download
@@ -56,6 +55,7 @@ import AdminDashboardOverview from '@/app/components/admin/AdminDashboardOvervie
 import BusinessManagementTab from '@/app/components/admin/BusinessManagementTab';
 import BoardManagementTab from '@/app/components/admin/BoardManagementTab';
 import AdminManagementTab from '@/app/components/admin/AdminManagementTab';
+import AdminProfileTab from '@/app/components/admin/AdminProfileTab';
 import SearchableFileSelect from '@/app/components/SearchableFileSelect';
 
 const BUSINESS_CATEGORIES = [
@@ -85,7 +85,7 @@ export default function AdminDashboardPage() {
   const locale = useLocale();
   const router = useRouter();
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'admins' | 'applications' | 'metrics' | 'board' | 'news' | 'gallery' | 'messages' | 'services' | 'fuel' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'profile' | 'users' | 'admins' | 'applications' | 'metrics' | 'board' | 'news' | 'gallery' | 'messages' | 'services' | 'fuel' | 'settings'>('dashboard');
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [appsTotalCount, setAppsTotalCount] = useState(0);
@@ -1417,6 +1417,29 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
               </div>
             </button>
 
+            {/* My Profile Tab */}
+            <button
+              onClick={() => {
+                setActiveTab('profile');
+                setIsMobileSidebarOpen(false);
+              }}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                activeTab === 'profile'
+                  ? 'bg-[#003399] text-white shadow-xs'
+                  : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900'
+              }`}
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <UserIcon className={`w-4 h-4 shrink-0 ${activeTab === 'profile' ? 'text-white' : 'text-[#003399]'}`} />
+                <span className="whitespace-nowrap">{locale === 'si' ? 'මගේ පැතිකඩ' : 'My Profile'}</span>
+              </div>
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border shrink-0 ${
+                activeTab === 'profile' ? 'bg-[#002266] text-white border-blue-400/40' : 'bg-slate-100 text-[#003399] border-slate-200'
+              }`}>
+                {isSuperAdmin ? 'SUPER' : 'ADMIN'}
+              </span>
+            </button>
+
             <button
               onClick={() => {
                 setActiveTab('users');
@@ -1691,6 +1714,7 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
             <div className="min-w-0">
               <h1 className="font-condensed text-xl font-bold text-neutral-900 leading-tight truncate">
                 {activeTab === 'dashboard' && (locale === 'si' ? 'පාලන පුවරුව සහ දළ විශ්ලේෂණය' : 'Dashboard Overview')}
+                {activeTab === 'profile' && (locale === 'si' ? 'මගේ පැතිකඩ සහ ආරක්ෂක කළමනාකරණය' : 'Profile & Security Management')}
                 {activeTab === 'users' && t('usersTab')}
                 {activeTab === 'admins' && (locale === 'si' ? 'පරිපාලක ගිණුම් කළමනාකරණය' : 'Administrator Accounts Management')}
                 {activeTab === 'applications' && (locale === 'si' ? 'සාමාජිකත්ව අයදුම්පත් කළමනාකරණය' : 'Membership Applications Management')}
@@ -1706,6 +1730,8 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
               <p className="text-xs text-neutral-500 truncate hidden sm:block">
                 {activeTab === 'dashboard'
                   ? (locale === 'si' ? 'වෙබ් අඩවි ක්‍රියාකාරකම්, සාමාජිකයින්, අයදුම්පත් සහ පාරිභෝගික විමසීම් සජීවීව නිරීක්ෂණය කරන්න' : 'Real-time monitoring of website activity, members, applications, and customer inquiries')
+                  : activeTab === 'profile'
+                    ? (locale === 'si' ? 'ඔබගේ පුද්ගලික තොරතුරු, සම්බන්ධතා විස්තර සහ පිවිසුම් මුරපදය ආරක්ෂිතව යාවත්කාලීන කරන්න' : 'Update your personal credentials, contact information, and account security password')
                   : activeTab === 'admins'
                     ? (locale === 'si' ? 'පද්ධති පරිපාලකයින්ගේ ප්‍රවේශ අයිතීන්, මුරපද සහ නව පරිපාලක ගිණුම් කළමනාකරණය' : 'Manage system administrator privileges, credentials, and access roles')
                   : activeTab === 'applications' 
@@ -1729,8 +1755,17 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
               <span className="hidden md:inline">{locale === 'si' ? 'වෙබ් අඩවිය' : 'Live Website'}</span>
             </Link>
 
-            {/* Administrator Profile Pill */}
-            <div className="hidden lg:flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-slate-50 border border-neutral-200">
+            {/* Administrator Profile Pill (Clickable -> Profile Tab) */}
+            <button
+              type="button"
+              onClick={() => setActiveTab('profile')}
+              title={locale === 'si' ? 'මගේ පැතිකඩ සහ මුරපදය කළමනාකරණය' : 'Manage Profile & Security'}
+              className={`hidden lg:flex items-center gap-2.5 px-3 py-1.5 rounded-lg border text-left cursor-pointer transition-all ${
+                activeTab === 'profile'
+                  ? 'bg-blue-50 border-[#003399] shadow-xs ring-1 ring-[#003399]/30'
+                  : 'bg-slate-50 hover:bg-slate-100 hover:border-slate-300 border-neutral-200'
+              }`}
+            >
               <div className={`w-7 h-7 rounded-md border flex items-center justify-center font-bold text-[11px] shrink-0 ${
                 isSuperAdmin 
                   ? 'bg-slate-900 border-slate-800 text-amber-400' 
@@ -1749,7 +1784,7 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
                 </div>
                 <p className="text-[10px] text-neutral-400 font-mono leading-tight">{currentUser?.username || 'admin'}</p>
               </div>
-            </div>
+            </button>
 
             {/* Log Out Button */}
             <button
@@ -1780,6 +1815,17 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
             onCountChange={(total, pending) => {
               setAppsTotalCount(total);
               setAppsPendingCount(pending);
+            }}
+          />
+        )}
+
+        {/* TAB: PROFILE & SECURITY MANAGEMENT */}
+        {activeTab === 'profile' && (
+          <AdminProfileTab
+            currentUser={currentUser}
+            isSuperAdmin={isSuperAdmin}
+            onProfileUpdated={(updated) => {
+              setCurrentUser((prev: any) => ({ ...prev, ...updated }));
             }}
           />
         )}
@@ -3956,7 +4002,7 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
               <div className="p-4 rounded-2xl bg-slate-50 border border-neutral-200/90 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
-                    <Sparkles className="w-4 h-4 text-[#003399]" />
+                    <UserIcon className="w-4 h-4 text-[#003399]" />
                     <span className="text-xs font-bold text-neutral-900">
                       {locale === 'si' ? 'පණිවිඩයට පිළිතුරු සපයන්න (Reply to Customer)' : 'Reply to Customer'}
                     </span>

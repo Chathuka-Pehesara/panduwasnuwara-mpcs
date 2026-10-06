@@ -19,7 +19,10 @@ import {
   Phone,
   Mail,
   KeyRound,
-  X
+  X,
+  Copy,
+  Check,
+  Shield
 } from 'lucide-react';
 import { User as UserType } from '@/lib/types';
 
@@ -51,6 +54,19 @@ export default function AdminManagementTab({ currentUsername }: AdminManagementT
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
+
+  // Password Visibility State for Super Admin
+  const [revealedPasswords, setRevealedPasswords] = useState<Record<number, boolean>>({});
+  const [copiedId, setCopiedId] = useState<number | null>(null);
+
+  // Quick Reset Password Modal State
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [resetTargetAdmin, setResetTargetAdmin] = useState<UserType | null>(null);
+  const [resetNewPassword, setResetNewPassword] = useState('');
+  const [showResetPassword, setShowResetPassword] = useState(true);
+  const [isSubmittingReset, setIsSubmittingReset] = useState(false);
+  const [resetError, setResetError] = useState('');
+  const [copiedReset, setCopiedReset] = useState(false);
 
   const fetchAdmins = async () => {
     setIsLoading(true);
@@ -102,6 +118,78 @@ export default function AdminManagementTab({ currentUsername }: AdminManagementT
     setShowPassword(false);
     setFormError('');
     setIsModalOpen(true);
+  };
+
+  const toggleRevealPassword = (id: number) => {
+    setRevealedPasswords(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const copyPasswordToClipboard = (id: number, pwd?: string) => {
+    if (!pwd) return;
+    navigator.clipboard?.writeText(pwd);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2500);
+  };
+
+  const openResetModal = (admin: UserType) => {
+    setResetTargetAdmin(admin);
+    setResetNewPassword('');
+    setShowResetPassword(true);
+    setResetError('');
+    setCopiedReset(false);
+    setIsResetModalOpen(true);
+  };
+
+  const handleGenerateResetPassword = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%&*';
+    let generated = 'Mpcs@';
+    for (let i = 0; i < 7; i++) {
+      generated += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setResetNewPassword(generated);
+    navigator.clipboard?.writeText(generated);
+    setCopiedReset(true);
+    setTimeout(() => setCopiedReset(false), 3000);
+  };
+
+  const handleExecuteResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetTargetAdmin) return;
+    setResetError('');
+
+    if (!resetNewPassword.trim() || resetNewPassword.trim().length < 5) {
+      setResetError(locale === 'si' ? 'නව මුරපදය අවම වශයෙන් අක්ෂර 5ක් විය යුතුය.' : 'Password must be at least 5 characters.');
+      return;
+    }
+
+    setIsSubmittingReset(true);
+    try {
+      const res = await fetch('/api/admin/admins', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: resetTargetAdmin.id,
+          password: resetNewPassword.trim()
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.admin) {
+        setAdmins(prev => prev.map(a => a.id === resetTargetAdmin.id ? { ...a, password: resetNewPassword.trim() } : a));
+        setIsResetModalOpen(false);
+        setSuccessMsg(
+          locale === 'si' 
+            ? `"${resetTargetAdmin.full_name || resetTargetAdmin.username}" පරිපාලකගේ මුරපදය සාර්ථකව මාරු කරන ලදී.`
+            : `Password for "${resetTargetAdmin.full_name || resetTargetAdmin.username}" successfully updated.`
+        );
+        setTimeout(() => setSuccessMsg(''), 5000);
+      } else {
+        setResetError(data.error || 'Failed to reset password');
+      }
+    } catch (err: any) {
+      setResetError(err.message || 'Operation failed');
+    } finally {
+      setIsSubmittingReset(false);
+    }
   };
 
   const handleSaveAdmin = async (e: React.FormEvent) => {
@@ -246,6 +334,21 @@ export default function AdminManagementTab({ currentUsername }: AdminManagementT
             </button>
           </div>
         </div>
+
+        {/* Security & Password Ethics Guidance Note */}
+        <div className="mt-4 pt-3 border-t border-neutral-100 flex items-start gap-2.5 text-xs text-neutral-600 bg-slate-50/80 p-3 rounded-lg border border-slate-200/80">
+          <Lock className="w-4 h-4 text-[#003399] shrink-0 mt-0.5" />
+          <div className="space-y-0.5 leading-relaxed">
+            <span className="font-bold text-neutral-800">
+              {locale === 'si' ? 'ආරක්ෂක සහ මුරපද ප්‍රතිපත්තිය:' : 'Security & Password Ethics Recommendation:'}
+            </span>
+            <p className="text-[11px] text-neutral-500">
+              {locale === 'si'
+                ? 'ප්‍රධාන පරිපාලක (Super Admin) හට පරිපාලකයින්ගේ මුරපද බැලීමේ සහ වෙනස් කිරීමේ සම්පූර්ණ බලතල ඇත. උපරිම දත්ත ආරක්ෂාව සඳහා, මුරපද සෘජුව බැලීමට වඩා නව තාවකාලික මුරපදයක් ජනනය කර ලබා දීම වඩාත් ආරක්ෂිතය.'
+                : 'As Super Admin, you have full privileges to view and change administrator passwords. In enterprise best practices, generating a fresh temporary password for the admin is recommended over reusing old credentials.'}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Success / Error Alerts */}
@@ -307,6 +410,7 @@ export default function AdminManagementTab({ currentUsername }: AdminManagementT
                   <th className="py-3.5 px-4">Administrator</th>
                   <th className="py-3.5 px-4">Access Role</th>
                   <th className="py-3.5 px-4">Username & NIC</th>
+                  <th className="py-3.5 px-4">Credentials / Password</th>
                   <th className="py-3.5 px-4">Contact Info</th>
                   <th className="py-3.5 px-4">Created Date</th>
                   <th className="py-3.5 px-4 text-right">Actions</th>
@@ -334,7 +438,7 @@ export default function AdminManagementTab({ currentUsername }: AdminManagementT
                               <span className="font-bold text-neutral-900 text-sm">{admin.full_name || admin.username}</span>
                               {isCurrent && (
                                 <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-blue-100 text-[#003399] font-mono">
-                                  YOU
+                                   YOU
                                 </span>
                               )}
                             </div>
@@ -362,6 +466,33 @@ export default function AdminManagementTab({ currentUsername }: AdminManagementT
                         <span className="text-[11px] text-neutral-500 block">{admin.nic || '—'}</span>
                       </td>
 
+                      {/* Password Visibility Cell for Super Admin */}
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-1.5 font-mono">
+                          <span className="px-2 py-1 rounded bg-slate-100 text-neutral-800 border border-neutral-200 text-xs font-bold font-mono">
+                            {revealedPasswords[admin.id] ? (admin.password || '—') : '••••••••'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => toggleRevealPassword(admin.id)}
+                            className="p-1.5 rounded-lg text-neutral-500 hover:text-[#003399] hover:bg-slate-100 transition-colors cursor-pointer"
+                            title={revealedPasswords[admin.id] ? 'Hide Password' : 'Show Password'}
+                          >
+                            {revealedPasswords[admin.id] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                          {admin.password && (
+                            <button
+                              type="button"
+                              onClick={() => copyPasswordToClipboard(admin.id, admin.password)}
+                              className="p-1.5 rounded-lg text-neutral-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
+                              title="Copy Password"
+                            >
+                              {copiedId === admin.id ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                            </button>
+                          )}
+                        </div>
+                      </td>
+
                       <td className="py-3.5 px-4">
                         <div className="space-y-0.5">
                           {admin.phone && (
@@ -387,9 +518,17 @@ export default function AdminManagementTab({ currentUsername }: AdminManagementT
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <button
+                            onClick={() => openResetModal(admin)}
+                            className="p-1.5 rounded-lg text-amber-600 hover:text-amber-800 hover:bg-amber-50 transition-colors cursor-pointer"
+                            title={locale === 'si' ? 'මුරපදය නැවත සකසන්න' : 'Reset Password'}
+                          >
+                            <KeyRound className="w-4 h-4" />
+                          </button>
+
+                          <button
                             onClick={() => openEditModal(admin)}
                             className="p-1.5 rounded-lg text-neutral-600 hover:text-[#003399] hover:bg-blue-50 transition-colors cursor-pointer"
-                            title={locale === 'si' ? 'සංස්කරණය / මුරපදය මාරු කරන්න' : 'Edit Credentials'}
+                            title={locale === 'si' ? 'තොරතුරු සංස්කරණය' : 'Edit Credentials'}
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
@@ -611,6 +750,110 @@ export default function AdminManagementTab({ currentUsername }: AdminManagementT
                     : modalMode === 'create'
                       ? (locale === 'si' ? 'පරිපාලක එක් කරන්න' : 'Create Administrator')
                       : (locale === 'si' ? 'වෙනස්කම් සුරකින්න' : 'Save Changes')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* QUICK RESET PASSWORD MODAL */}
+      {isResetModalOpen && resetTargetAdmin && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-neutral-200 space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-200">
+                  <KeyRound className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-condensed text-lg font-bold text-neutral-900">
+                    {locale === 'si' ? 'මුරපදය නැවත සකසන්න' : 'Reset Admin Password'}
+                  </h3>
+                  <p className="text-[11px] text-neutral-500 font-mono">
+                    @{resetTargetAdmin.username} ({resetTargetAdmin.full_name || resetTargetAdmin.username})
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsResetModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-neutral-500 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {copiedReset && (
+              <div className="p-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs font-mono font-semibold flex items-center justify-between">
+                <span>{locale === 'si' ? 'ජනනය කළ මුරපදය පිටපත් කරන ලදී!' : 'Generated password copied to clipboard!'}</span>
+                <Check className="w-4 h-4 text-emerald-600" />
+              </div>
+            )}
+
+            {resetError && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{resetError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleExecuteResetPassword} className="space-y-4">
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-neutral-700">
+                    {locale === 'si' ? 'නව මුරපදය (New Password)' : 'New Password'} <span className="text-rose-500">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleGenerateResetPassword}
+                    className="inline-flex items-center gap-1 text-[11px] text-amber-700 font-bold hover:underline cursor-pointer"
+                  >
+                    <User className="w-3 h-3 text-amber-600" />
+                    <span>{locale === 'si' ? 'ස්වයංක්‍රීයව ජනනය කරන්න' : 'Generate Strong'}</span>
+                  </button>
+                </div>
+
+                <div className="relative">
+                  <input
+                    type={showResetPassword ? 'text' : 'password'}
+                    value={resetNewPassword}
+                    onChange={e => setResetNewPassword(e.target.value)}
+                    placeholder={locale === 'si' ? 'අවම වශයෙන් අක්ෂර 5ක්' : 'Minimum 5 characters'}
+                    required
+                    className="w-full pl-3.5 pr-10 py-2.5 bg-slate-50 border border-neutral-200 rounded-xl text-xs font-mono text-neutral-900 focus:bg-white focus:outline-none focus:border-[#003399] transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowResetPassword(!showResetPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 cursor-pointer"
+                  >
+                    {showResetPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-slate-50 border border-neutral-200 text-[11px] text-neutral-500 leading-relaxed">
+                {locale === 'si'
+                  ? 'නව මුරපදය ඇතුළත් කිරීමෙන් පසු සුරකින්න. එම මුරපදය භාවිතයෙන් පරිපාලක හට පද්ධතියට පිවිසිය හැක.'
+                  : 'After saving, the administrator can immediately sign in using this new password.'}
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-neutral-100">
+                <button
+                  type="button"
+                  onClick={() => setIsResetModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-neutral-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  {locale === 'si' ? 'අවලංගු කරන්න' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingReset || !resetNewPassword}
+                  className="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-md transition-all cursor-pointer disabled:opacity-60 flex items-center gap-1.5"
+                >
+                  <KeyRound className="w-3.5 h-3.5" />
+                  <span>{isSubmittingReset ? (locale === 'si' ? 'සුරකිමින්...' : 'Saving...') : (locale === 'si' ? 'මුරපදය සුරකින්න' : 'Save Password')}</span>
                 </button>
               </div>
             </form>

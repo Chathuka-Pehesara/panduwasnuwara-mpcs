@@ -21,7 +21,7 @@ import {
   Phone,
   Calendar,
   Layers,
-  Sparkles,
+  User,
   ExternalLink
 } from 'lucide-react';
 
@@ -456,7 +456,7 @@ export default function AdminDashboardOverview({ onNavigateTab }: AdminDashboard
               </div>
             </div>
             <div className="mt-3 pt-2 border-t border-neutral-200/60 text-[10px] text-neutral-400 flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-amber-500" />
+              <User className="w-3 h-3 text-amber-500" />
               <span>Will be configured upon request</span>
             </div>
           </div>
