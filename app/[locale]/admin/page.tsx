@@ -46,7 +46,8 @@ import {
   RotateCcw,
   FileCheck,
   LayoutDashboard,
-  Download
+  Download,
+  Printer
 } from 'lucide-react';
 import { User, GalleryPost, NewsAnnouncement, Inquiry, BusinessServiceItem, FuelPrice } from '@/lib/types';
 import { businessesData } from '@/app/components/BusinessesSection';
@@ -1314,13 +1315,13 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
       {/* MOBILE TOP BAR */}
       <div className="md:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-neutral-200 sticky top-0 z-30 shadow-2xs">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full overflow-hidden border border-neutral-200 bg-white flex items-center justify-center shrink-0">
+          <div className="w-8 h-8 rounded-full overflow-hidden border border-neutral-200 bg-[#8a004b] flex items-center justify-center shrink-0 shadow-2xs">
             <Image
-              src="/logo-photo.jpg"
+              src="/Logo_new.jpeg"
               alt="Logo"
-              width={32}
-              height={32}
-              className="object-cover"
+              width={56}
+              height={30}
+              className="w-auto h-5.5 max-w-none translate-y-[1px] object-contain"
             />
           </div>
           <div>
@@ -1367,13 +1368,13 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
           {/* Brand Header */}
           <div className="flex items-center justify-between pb-4 border-b border-neutral-100 shrink-0">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full overflow-hidden border border-neutral-200 bg-white flex items-center justify-center shrink-0">
+              <div className="w-11 h-11 rounded-full overflow-hidden border border-neutral-200 bg-[#8a004b] flex items-center justify-center shrink-0 shadow-xs">
                 <Image
-                  src="/logo-photo.jpg"
+                  src="/Logo_new.jpeg"
                   alt="MPCS Logo"
-                  width={40}
+                  width={75}
                   height={40}
-                  className="object-cover"
+                  className="w-auto h-7 max-w-none translate-y-[2px] object-contain"
                 />
               </div>
               <div>
@@ -2038,11 +2039,11 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
                     {/* File Input */}
                     <div className="space-y-1.5">
                       <label className="block text-xs font-bold text-neutral-700">
-                        {locale === 'si' ? 'සාමාජික CSV ගොනු තෝරන්න (එක් ගොනුවක් හෝ කිහිපයක්)' : 'Select Member File(s) (One or More CSVs)'}
+                        {locale === 'si' ? 'සාමාජික නාමාවලි Excel (.xlsx, .xls) හෝ CSV ගොනු තෝරන්න:' : 'Select Member Register File(s) (Excel .xlsx, .xls or CSV):'}
                       </label>
                       <input
                         type="file"
-                        accept=".csv,.txt,.tsv"
+                        accept=".xlsx,.xls,.csv,.txt"
                         multiple
                         required
                         onChange={e => {
@@ -2052,6 +2053,11 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
                         }}
                         className="w-full text-xs text-neutral-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-neutral-700 hover:file:bg-slate-200 cursor-pointer border border-neutral-200 rounded-xl p-2 bg-slate-50"
                       />
+                      <p className="text-[10.5px] text-blue-700 bg-blue-50/70 p-2 rounded-lg border border-blue-200/60 leading-tight">
+                        {locale === 'si' 
+                          ? '💡 උපදෙස: සිංහල අකුරු ප්‍රශ්නාර්ථ ලකුණු (?) නොවී නිවැරදිව පෙන්වීමට, Excel (.xlsx) ගොනුව කෙලින්ම උඩුගත කරන්න හෝ Excel වලින් "CSV UTF-8" ලෙස සුරකින්න.'
+                          : '💡 Tip: To ensure Sinhala text renders without question marks (?), upload Excel (.xlsx) directly or save as "CSV UTF-8".'}
+                      </p>
                       {memberFiles.length > 0 && (
                         <div className="flex flex-wrap gap-1.5 pt-1">
                           {memberFiles.map((f, i) => (
@@ -2139,6 +2145,19 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
 
                       <button
                         type="button"
+                        onClick={() => {
+                          const url = `/api/pdf/export?module=members&file=${encodeURIComponent(selectedMemberDownloadFile)}&autoprint=1`;
+                          window.open(url, '_blank');
+                        }}
+                        className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold transition-colors cursor-pointer shadow-2xs flex items-center justify-center gap-1.5 shrink-0 whitespace-nowrap active:scale-98"
+                        title={locale === 'si' ? 'සාමාජික වාර්තා PDF බාගන්න' : 'Download Filtered Member PDF'}
+                      >
+                        <Printer className="w-3.5 h-3.5 shrink-0" />
+                        <span>{locale === 'si' ? 'බාගන්න (PDF)' : 'Download (PDF)'}</span>
+                      </button>
+
+                      <button
+                        type="button"
                         onClick={() => handleAdminDownloadMemberCsv()}
                         className="px-3.5 py-2 rounded-xl bg-[#003399] hover:bg-[#002266] text-white text-xs font-bold transition-colors cursor-pointer shadow-2xs flex items-center justify-center gap-1.5 shrink-0 whitespace-nowrap active:scale-98"
                       >
@@ -2153,14 +2172,25 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
                 <div className="pt-3 border-t border-neutral-100 mt-4 text-[11px] text-neutral-400 font-mono space-y-2 bg-slate-50/70 p-3.5 rounded-xl border border-neutral-100">
                   <div className="flex items-center justify-between gap-2">
                     <p className="font-bold text-neutral-700 font-sans">{locale === 'si' ? 'අනුමත තීරු පිළිවෙළ:' : 'Expected Columns Format:'}</p>
-                    <button
-                      type="button"
-                      onClick={() => downloadCsvTemplate('member')}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-blue-200 text-[#003399] hover:bg-blue-50 text-[11px] font-sans font-bold shadow-2xs cursor-pointer transition-all"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      <span>{locale === 'si' ? 'නියැදි CSV බාගන්න' : 'Download CSV Template'}</span>
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <a
+                        href="/samples/sample_all_members.xlsx"
+                        download="sample_all_members.xlsx"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-300 text-emerald-800 hover:bg-emerald-100 text-[11px] font-sans font-bold shadow-2xs cursor-pointer transition-all"
+                        title={locale === 'si' ? 'නියැදි Excel (.xlsx) ගොනුව බාගන්න' : 'Download Sample Excel (.xlsx)'}
+                      >
+                        <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
+                        <span>{locale === 'si' ? 'Excel (.xlsx) නියැදිය' : 'Sample (.xlsx)'}</span>
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => downloadCsvTemplate('member')}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-blue-200 text-[#003399] hover:bg-blue-50 text-[11px] font-sans font-bold shadow-2xs cursor-pointer transition-all"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>{locale === 'si' ? 'නියැදි CSV' : 'Sample CSV'}</span>
+                      </button>
+                    </div>
                   </div>
                   <p className="text-neutral-800 font-bold bg-white/80 p-1.5 rounded border border-neutral-200/60 overflow-x-auto text-[10.5px]">
                     Member Number, NIC, FULL NAME, ADDRESS, POSTAL ADDRESS, GENDER
@@ -2205,11 +2235,11 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
                     {/* File Input */}
                     <div className="space-y-1.5">
                       <label className="block text-xs font-bold text-neutral-700">
-                        {locale === 'si' ? 'ඡන්ද හිමි නාමලේඛන CSV ගොනු තෝරන්න (එක් ගොනුවක් හෝ කිහිපයක්)' : 'Select Electoral Register File(s) (One or More CSVs)'}
+                        {locale === 'si' ? 'ඡන්ද හිමි නාමලේඛන Excel (.xlsx, .xls) හෝ CSV ගොනු තෝරන්න:' : 'Select Electoral Register File(s) (Excel .xlsx, .xls or CSV):'}
                       </label>
                       <input
                         type="file"
-                        accept=".csv,.txt,.tsv"
+                        accept=".xlsx,.xls,.csv,.txt"
                         multiple
                         required
                         onChange={e => {
@@ -2219,6 +2249,11 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
                         }}
                         className="w-full text-xs text-neutral-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-neutral-700 hover:file:bg-slate-200 cursor-pointer border border-neutral-200 rounded-xl p-2 bg-slate-50"
                       />
+                      <p className="text-[10.5px] text-emerald-700 bg-emerald-50/70 p-2 rounded-lg border border-emerald-200/60 leading-tight">
+                        {locale === 'si' 
+                          ? '💡 උපදෙස: සිංහල අකුරු ප්‍රශ්නාර්ථ ලකුණු (?) නොවී නිවැරදිව පෙන්වීමට, Excel (.xlsx) ගොනුව කෙලින්ම උඩුගත කරන්න හෝ Excel වලින් "CSV UTF-8" ලෙස සුරකින්න.'
+                          : '💡 Tip: To ensure Sinhala text renders without question marks (?), upload Excel (.xlsx) directly or save as "CSV UTF-8".'}
+                      </p>
                       {voterFiles.length > 0 && (
                         <div className="flex flex-wrap gap-1.5 pt-1">
                           {voterFiles.map((f, i) => (
@@ -2306,6 +2341,19 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
 
                       <button
                         type="button"
+                        onClick={() => {
+                          const url = `/api/pdf/export?module=voters&file=${encodeURIComponent(selectedDownloadFile)}&autoprint=1`;
+                          window.open(url, '_blank');
+                        }}
+                        className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold transition-colors cursor-pointer shadow-2xs flex items-center justify-center gap-1.5 shrink-0 whitespace-nowrap active:scale-98"
+                        title={locale === 'si' ? 'ඡන්ද හිමි නාමලේඛනය PDF බාගන්න' : 'Download Filtered Voter PDF'}
+                      >
+                        <Printer className="w-3.5 h-3.5 shrink-0" />
+                        <span>{locale === 'si' ? 'බාගන්න (PDF)' : 'Download (PDF)'}</span>
+                      </button>
+
+                      <button
+                        type="button"
                         onClick={() => handleAdminDownloadVoterCsv()}
                         className="px-3.5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition-colors cursor-pointer shadow-2xs flex items-center justify-center gap-1.5 shrink-0 whitespace-nowrap active:scale-98"
                       >
@@ -2320,14 +2368,25 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
                 <div className="pt-3 border-t border-neutral-100 mt-4 text-[11px] text-neutral-400 font-mono space-y-2 bg-slate-50/70 p-3.5 rounded-xl border border-neutral-100">
                   <div className="flex items-center justify-between gap-2">
                     <p className="font-bold text-neutral-700 font-sans">{locale === 'si' ? 'අනුමත තීරු පිළිවෙළ:' : 'Expected Columns Format:'}</p>
-                    <button
-                      type="button"
-                      onClick={() => downloadCsvTemplate('voter')}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-emerald-200 text-emerald-800 hover:bg-emerald-50 text-[11px] font-sans font-bold shadow-2xs cursor-pointer transition-all"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      <span>{locale === 'si' ? 'නියැදි CSV බාගන්න' : 'Download CSV Template'}</span>
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <a
+                        href="/samples/sample_eligible_voters.xlsx"
+                        download="sample_eligible_voters.xlsx"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-300 text-emerald-800 hover:bg-emerald-100 text-[11px] font-sans font-bold shadow-2xs cursor-pointer transition-all"
+                        title={locale === 'si' ? 'නියැදි Excel (.xlsx) ගොනුව බාගන්න' : 'Download Sample Excel (.xlsx)'}
+                      >
+                        <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
+                        <span>{locale === 'si' ? 'Excel (.xlsx) නියැදිය' : 'Sample (.xlsx)'}</span>
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => downloadCsvTemplate('voter')}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-emerald-200 text-emerald-800 hover:bg-emerald-50 text-[11px] font-sans font-bold shadow-2xs cursor-pointer transition-all"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>{locale === 'si' ? 'නියැදි CSV' : 'Sample CSV'}</span>
+                      </button>
+                    </div>
                   </div>
                   <p className="text-neutral-800 font-bold bg-white/80 p-1.5 rounded border border-neutral-200/60 overflow-x-auto text-[10.5px]">
                     Member Number, NIC, FULL NAME, ADDRESS, POSTAL ADDRESS, GENDER

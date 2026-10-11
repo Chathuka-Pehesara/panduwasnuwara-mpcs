@@ -63,7 +63,7 @@ export default function BusinessDetailPage() {
               managers: Array.isArray(found.managers)
                 ? found.managers
                 : (found.manager ? [{ name: found.manager, location: found.location || '', hotline: found.hotline || '' }] : []),
-              imageSrc: found.image_src || '/logo-photo.jpg',
+              imageSrc: found.image_src || '/Logo_new.jpeg',
               coverImage: found.cover_image || '',
               isNew: Boolean(found.is_new),
               services: Array.isArray(found.services) ? found.services : [],
