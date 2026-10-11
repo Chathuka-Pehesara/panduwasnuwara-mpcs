@@ -58,7 +58,6 @@ export async function GET(req: NextRequest) {
       const address = escapeHtml(row.address || '—');
       const postalAddress = escapeHtml(row.postal_address || '—');
       const gender = escapeHtml(row.gender || '—');
-      const phone = !isVoters ? escapeHtml(row.phone || '—') : '';
 
       return `
         <tr>
@@ -69,7 +68,6 @@ export async function GET(req: NextRequest) {
           <td class="col-addr">${address}</td>
           <td class="col-addr">${postalAddress}</td>
           <td class="col-gender">${gender}</td>
-          ${!isVoters ? `<td class="col-mono col-phone">${phone}</td>` : ''}
         </tr>
       `;
     }).join('');
@@ -303,8 +301,7 @@ export async function GET(req: NextRequest) {
     .col-nic { width: 95px; white-space: nowrap; font-weight: 600; }
     .col-name { min-width: 160px; font-weight: 600; color: #0f172a; }
     .col-addr { min-width: 150px; color: #334155; }
-    .col-gender { width: 55px; text-align: center; }
-    .col-phone { width: 85px; white-space: nowrap; }
+    .col-gender { width: 65px; text-align: center; }
     .col-mono { font-family: 'Courier New', Courier, monospace; }
 
     /* Empty state */
@@ -317,33 +314,6 @@ export async function GET(req: NextRequest) {
       border: 1px dashed #cbd5e1;
       border-radius: 8px;
       margin: 16px 0;
-    }
-
-    /* Official Sign-off Footer */
-    .doc-signoff {
-      margin-top: 36px;
-      padding-top: 20px;
-      display: flex;
-      justify-content: space-between;
-      page-break-inside: avoid;
-    }
-    .sign-box {
-      width: 28%;
-      text-align: center;
-    }
-    .sign-line {
-      border-top: 1px dashed #64748b;
-      margin-top: 36px;
-      margin-bottom: 4px;
-    }
-    .sign-title {
-      font-size: 9.5px;
-      font-weight: 700;
-      color: #334155;
-    }
-    .sign-desc {
-      font-size: 8.5px;
-      color: #64748b;
     }
 
     .doc-footer-note {
@@ -459,7 +429,6 @@ export async function GET(req: NextRequest) {
             <th class="col-addr">ලිපිනය (Address)</th>
             <th class="col-addr">තැපැල් ලිපිනය (Postal Address)</th>
             <th class="col-gender">ස්ත්‍රී/පුරුෂ</th>
-            ${!isVoters ? `<th class="col-phone">දුරකථන (Phone)</th>` : ''}
           </tr>
         </thead>
         <tbody>
@@ -467,25 +436,6 @@ export async function GET(req: NextRequest) {
         </tbody>
       </table>
     `}
-
-    <!-- Sign-off Certification Section -->
-    <footer class="doc-signoff">
-      <div class="sign-box">
-        <div class="sign-line"></div>
-        <div class="sign-title">සකස් කළේ (Prepared By)</div>
-        <div class="sign-desc">විෂයභාර නිලධාරී / Subject Clerk</div>
-      </div>
-      <div class="sign-box">
-        <div class="sign-line"></div>
-        <div class="sign-title">පරීක්ෂා කළේ (Checked & Verified By)</div>
-        <div class="sign-desc">අභ්‍යන්තර විගණක / පරිපාලන නිලධාරී</div>
-      </div>
-      <div class="sign-box">
-        <div class="sign-line"></div>
-        <div class="sign-title">අනුමත කළේ (Approved By)</div>
-        <div class="sign-desc">මහා කළමනාකරු / සභාපති (General Manager / Chairman)</div>
-      </div>
-    </footer>
 
     <!-- Print Footer Note -->
     <div class="doc-footer-note">
