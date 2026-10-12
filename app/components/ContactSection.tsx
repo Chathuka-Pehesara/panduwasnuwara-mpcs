@@ -10,8 +10,20 @@ import {
   Send,
   CheckCircle2,
   Building2,
-  AlertCircle
+  AlertCircle,
+  ExternalLink
 } from 'lucide-react';
+
+function GoogleMapsIcon({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#EA4335" />
+      <path d="M12 2C8.13 2 5 5.13 5 9c0 2.38 1.19 5.21 2.94 8.05L12 22V2z" fill="#4285F4" opacity="0.25" />
+      <circle cx="12" cy="9" r="3" fill="#FFFFFF" />
+      <circle cx="12" cy="9" r="1.8" fill="#4285F4" />
+    </svg>
+  );
+}
 
 export default function ContactSection() {
   const locale = useLocale();
@@ -119,14 +131,32 @@ export default function ContactSection() {
             </div>
 
             <div className="space-y-4 text-xs sm:text-sm">
-              {/* Address */}
+              {/* Address with Google Maps link */}
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-xl bg-slate-50 border border-neutral-200 flex items-center justify-center shrink-0 mt-0.5">
-                  <MapPin className="w-4 h-4 text-amber-500" />
-                </div>
+                <a
+                  href="https://maps.app.goo.gl/1T3txWoCD7yT4URU9?g_st=ac"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-8 h-8 rounded-xl bg-slate-50 border border-neutral-200 flex items-center justify-center shrink-0 mt-0.5 hover:bg-blue-50 hover:border-[#003399]/40 hover:scale-105 transition-all shadow-2xs group"
+                  title={isSi ? 'Google Maps හි බලන්න' : 'View on Google Maps'}
+                >
+                  <GoogleMapsIcon className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                </a>
                 <div>
-                  <p className="font-bold text-neutral-900">{t('addressSi')}</p>
-                  <p className="text-neutral-500 text-xs mt-0.5">{t('addressEn')}</p>
+                  <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">{t('addressLabel')}</p>
+                  <a
+                    href="https://maps.app.goo.gl/1T3txWoCD7yT4URU9?g_st=ac"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group block mt-0.5"
+                    title={isSi ? 'Google Maps හි බලන්න' : 'View on Google Maps'}
+                  >
+                    <div className="flex items-center gap-1.5 font-bold text-neutral-900 group-hover:text-[#003399] transition-colors">
+                      <span>{t('addressSi')}</span>
+                      <ExternalLink className="w-3.5 h-3.5 text-neutral-400 group-hover:text-[#003399] transition-colors shrink-0" />
+                    </div>
+                    <p className="text-neutral-500 text-xs mt-0.5 group-hover:text-neutral-700">{t('addressEn')}</p>
+                  </a>
                 </div>
               </div>
 

@@ -52,16 +52,16 @@ export default function RuralBankPage() {
 
         if (isMounted && bizData.success && Array.isArray(bizData.businesses)) {
           const rb = bizData.businesses.find((b: any) => b.key === 'rural-bank');
-          if (rb && Array.isArray(rb.managers) && rb.managers.length > 0) {
+          if (rb && Array.isArray(rb.managers) && rb.managers.length > 1) {
             const mapped: RuralBankBranch[] = rb.managers.map((m: any, idx: number) => ({
               id: idx + 1,
-              branchNameEn: m.branch || m.branchNameEn || `Branch ${idx + 1}`,
-              branchNameSi: m.branch || m.branchNameSi || `ශාඛාව ${idx + 1}`,
-              managerNameEn: m.name || m.managerNameEn || '',
-              managerNameSi: m.name || m.managerNameSi || '',
+              branchNameEn: m.branch || `Branch ${idx + 1}`,
+              branchNameSi: m.branch || `ශාඛාව ${idx + 1}`,
+              managerNameEn: m.name || '',
+              managerNameSi: m.name || '',
               hotline: m.hotline || '',
-              addressEn: m.location || m.addressEn || '',
-              addressSi: m.location || m.addressSi || ''
+              addressEn: m.location || '',
+              addressSi: m.location || ''
             }));
             setBranches(mapped);
           }

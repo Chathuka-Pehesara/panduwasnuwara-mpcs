@@ -10,7 +10,8 @@ import {
   Phone, 
   Mail, 
   Clock, 
-  ShieldCheck
+  ShieldCheck,
+  ExternalLink
 } from 'lucide-react';
 import { useMembership } from '@/app/context/MembershipContext';
 
@@ -37,13 +38,13 @@ export default function Footer() {
           {/* Column 1: Organization Branding (lg:col-span-5) */}
           <div className="lg:col-span-5 space-y-4">
             <div className="flex items-start gap-3.5">
-              <div className="w-13 h-13 rounded-2xl bg-white p-1.5 flex items-center justify-center shrink-0 shadow-lg border border-white/20">
+              <div className="w-12 h-12 rounded-full bg-[#8a004b] flex items-center justify-center shrink-0 shadow-lg border border-white/20 overflow-hidden">
                 <Image
-                  src="/logo-photo.jpg"
-                  alt="Panduwasnuwara MPCS Logo"
-                  width={48}
-                  height={48}
-                  className="w-full h-full object-contain"
+                  src="/Logo_new.jpeg"
+                  alt="Panduwasnuwara MPCS Co-op Logo"
+                  width={80}
+                  height={43}
+                  className="w-auto h-8 max-w-none translate-y-[2px] object-contain"
                 />
               </div>
               <div>
@@ -187,16 +188,25 @@ export default function Footer() {
             </div>
 
             <div className="space-y-3.5 text-xs">
-              {/* Address */}
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0 mt-0.5">
+              {/* Address with Google Maps link */}
+              <a
+                href="https://maps.app.goo.gl/1T3txWoCD7yT4URU9?g_st=ac"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-start gap-3 group hover:opacity-90 transition-opacity"
+                title={locale === 'si' ? 'Google Maps හි බලන්න' : 'View on Google Maps'}
+              >
+                <div className="w-8 h-8 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0 mt-0.5 group-hover:border-amber-400/50 transition-colors">
                   <MapPin className="w-4 h-4 text-amber-400" />
                 </div>
                 <div>
-                  <p className="text-slate-200 font-semibold">{t('addressSi')}</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-slate-200 font-semibold group-hover:text-amber-300 transition-colors">{t('addressSi')}</p>
+                    <ExternalLink className="w-3 h-3 text-slate-500 group-hover:text-amber-300 transition-colors" />
+                  </div>
                   <p className="text-slate-400 text-[11px] mt-0.5">{t('addressEn')}</p>
                 </div>
-              </div>
+              </a>
 
               {/* Phone */}
               <div className="flex items-start gap-3">

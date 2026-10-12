@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { importMembers, MemberRecord } from '@/lib/models/stats';
 import { initDatabaseSchema } from '@/lib/db/schema';
+import * as XLSX from 'xlsx';
 
 function isAdmin(req: NextRequest): boolean {
   const token = req.cookies.get('mpcs_admin_token')?.value || req.cookies.get('mpcs_auth_token')?.value;
@@ -36,12 +37,46 @@ function splitCsvLine(line: string): string[] {
   return result;
 }
 
+async function decodeFileToText(file: File): Promise<string> {
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+
+  // Check UTF-16 LE BOM (FF FE)
+  if (buffer.length >= 2 && buffer[0] === 0xff && buffer[1] === 0xfe) {
+    const decoder = new TextDecoder('utf-16le');
+    return decoder.decode(buffer.subarray(2)).replace(/^\uFEFF/, '').replace(/\0/g, '');
+  }
+  // Check UTF-16 BE BOM (FE FF)
+  if (buffer.length >= 2 && buffer[0] === 0xfe && buffer[1] === 0xff) {
+    const decoder = new TextDecoder('utf-16be');
+    return decoder.decode(buffer.subarray(2)).replace(/^\uFEFF/, '').replace(/\0/g, '');
+  }
+  // Check UTF-8 BOM (EF BB BF)
+  if (buffer.length >= 3 && buffer[0] === 0xef && buffer[1] === 0xbb && buffer[2] === 0xbf) {
+    const decoder = new TextDecoder('utf-8');
+    return decoder.decode(buffer.subarray(3)).replace(/^\uFEFF/, '');
+  }
+
+  try {
+    const utf8Decoder = new TextDecoder('utf-8', { fatal: true });
+    return utf8Decoder.decode(buffer).replace(/^\uFEFF/, '');
+  } catch {
+    try {
+      const winDecoder = new TextDecoder('windows-1252');
+      return winDecoder.decode(buffer).replace(/^\uFEFF/, '');
+    } catch {
+      return buffer.toString('utf-8').replace(/^\uFEFF/, '');
+    }
+  }
+}
+
 /**
  * Robust CSV parser supporting exact format:
  * Member Number, NIC, FULL NAME, ADDRESS, POSTAL ADDRESS, GENDER
  */
 function parseMemberCsv(text: string): MemberRecord[] {
-  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const cleanText = (text || '').replace(/^\uFEFF/, '').replace(/\0/g, '');
+  const lines = cleanText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   if (lines.length === 0) return [];
 
   // Inspect first line to check if header exists
@@ -140,6 +175,120 @@ function parseMemberCsv(text: string): MemberRecord[] {
   return records;
 }
 
+/**
+ * Robust Member Excel matrix parser supporting .xlsx / .xls
+ */
+function parseMemberMatrix(rows: any[][]): MemberRecord[] {
+  if (!rows || rows.length === 0) return [];
+  const lines = rows.map(r => (Array.isArray(r) ? r : []).map(c => String(c ?? '').trim()));
+  const headerRow = lines[0].map(h => h.toLowerCase().replace(/[^a-z0-9]/g, ''));
+  const hasHeader = headerRow.some(h => 
+    h.includes('name') || h.includes('nic') || h.includes('member') || h.includes('address') || h.includes('gender')
+  );
+
+  let colMap = {
+    memberNumber: 0,
+    nic: 1,
+    fullName: 2,
+    address: 3,
+    postalAddress: 4,
+    gender: 5,
+    phone: -1
+  };
+
+  if (hasHeader) {
+    colMap = {
+      memberNumber: headerRow.findIndex(h => h.includes('member') || h.includes('no') || h.includes('id') || h.includes('reg')),
+      nic: headerRow.findIndex(h => h.includes('nic') || h.includes('identity')),
+      fullName: headerRow.findIndex(h => (h.includes('name') && !h.includes('member')) || h === 'fullname' || h === 'name'),
+      address: headerRow.findIndex(h => h === 'address' || (h.includes('address') && !h.includes('postal'))),
+      postalAddress: headerRow.findIndex(h => h.includes('postal') || h.includes('postaddress') || h.includes('mailing')),
+      gender: headerRow.findIndex(h => h.includes('gender') || h.includes('sex')),
+      phone: headerRow.findIndex(h => h.includes('phone') || h.includes('mobile') || h.includes('contact') || h.includes('tel'))
+    };
+
+    if (colMap.fullName === -1) {
+      colMap.fullName = headerRow.findIndex(h => h.includes('name'));
+    }
+  }
+
+  const dataRows = hasHeader ? lines.slice(1) : lines;
+  const records: MemberRecord[] = [];
+
+  for (const parts of dataRows) {
+    if (parts.length === 0 || !parts.some(Boolean)) continue;
+
+    let memberNumber = '';
+    let nic = '';
+    let fullName = '';
+    let address = '';
+    let postalAddress = '';
+    let gender = '';
+    let phone = '';
+
+    if (hasHeader && colMap.fullName !== -1) {
+      if (colMap.memberNumber !== -1 && parts[colMap.memberNumber]) memberNumber = parts[colMap.memberNumber];
+      if (colMap.nic !== -1 && parts[colMap.nic]) nic = parts[colMap.nic];
+      if (colMap.fullName !== -1 && parts[colMap.fullName]) fullName = parts[colMap.fullName];
+      if (colMap.address !== -1 && parts[colMap.address]) address = parts[colMap.address];
+      if (colMap.postalAddress !== -1 && parts[colMap.postalAddress]) postalAddress = parts[colMap.postalAddress];
+      if (colMap.gender !== -1 && parts[colMap.gender]) gender = parts[colMap.gender];
+      if (colMap.phone !== -1 && parts[colMap.phone]) phone = parts[colMap.phone];
+    } else {
+      if (parts.length >= 6) {
+        memberNumber = parts[0];
+        nic = parts[1];
+        fullName = parts[2];
+        address = parts[3];
+        postalAddress = parts[4];
+        gender = parts[5];
+      } else if (parts.length === 5) {
+        memberNumber = parts[0];
+        nic = parts[1];
+        fullName = parts[2];
+        address = parts[3];
+        postalAddress = parts[4];
+      } else if (parts.length === 4) {
+        memberNumber = parts[0];
+        nic = parts[1];
+        fullName = parts[2];
+        address = parts[3];
+      } else if (parts.length === 3) {
+        memberNumber = parts[0];
+        nic = parts[1];
+        fullName = parts[2];
+      } else if (parts.length === 2) {
+        fullName = parts[0];
+        nic = parts[1];
+      } else if (parts.length === 1) {
+        fullName = parts[0];
+      }
+    }
+
+    if (fullName) {
+      records.push({ memberNumber, nic, fullName, address, postalAddress, gender, phone });
+    }
+  }
+
+  return records;
+}
+
+async function parseMemberRecordsFromFile(file: File): Promise<MemberRecord[]> {
+  const name = file.name.toLowerCase();
+  if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
+    const arrayBuffer = await file.arrayBuffer();
+    const wb = XLSX.read(arrayBuffer, { type: 'array' });
+    const sheetName = wb.SheetNames[0];
+    if (!sheetName) return [];
+    const sheet = wb.Sheets[sheetName];
+    const rawRows = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, defval: '' });
+    return parseMemberMatrix(rawRows);
+  } else {
+    const fileText = await decodeFileToText(file);
+    return parseMemberCsv(fileText);
+  }
+}
+
 export async function POST(req: NextRequest) {
   if (!isAdmin(req)) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
@@ -171,10 +320,22 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: false, error: 'No files provided for upload.' }, { status: 400 });
       }
 
+      // Check if any file contains severe question marks (?) from destructive Excel ANSI export
+      for (const file of fileList) {
+        const testRecords = await parseMemberRecordsFromFile(file);
+        const corruptCount = testRecords.filter(r => (r.fullName || '').includes('???')).length;
+        if (corruptCount > 0 && corruptCount >= testRecords.length * 0.4) {
+          return NextResponse.json({
+            success: false,
+            error: `The file "${file.name}" contains question marks (?) instead of Sinhala text. In Microsoft Excel, please save the file as "CSV UTF-8 (Comma delimited)" or upload the Excel workbook (.xlsx) directly.`,
+            isEncodingError: true
+          }, { status: 400 });
+        }
+      }
+
       let isFirstFile = true;
       for (const file of fileList) {
-        const fileText = await file.text();
-        const records = parseMemberCsv(fileText);
+        const records = await parseMemberRecordsFromFile(file);
 
         if (records.length > 0) {
           const fileMode = mode === 'replace' ? (isFirstFile ? 'replace' : 'append') : mode;

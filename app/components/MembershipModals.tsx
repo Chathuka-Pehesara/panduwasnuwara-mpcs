@@ -24,6 +24,7 @@ import {
   FileSpreadsheet,
   Info,
   Download,
+  Printer,
 } from 'lucide-react';
 import { useMembership } from '@/app/context/MembershipContext';
 import SearchableFileSelect from './SearchableFileSelect';
@@ -122,6 +123,11 @@ function MemberDetailsModal({ onClose }: { onClose: () => void }) {
     window.open(url, '_blank');
   };
 
+  const handleDownloadPdf = () => {
+    const url = `/api/pdf/export?module=members&file=${encodeURIComponent(selectedFile)}&autoprint=1`;
+    window.open(url, '_blank');
+  };
+
   return (
     <div className="flex flex-col h-full max-h-[90vh]">
       {/* Modal Header */}
@@ -188,18 +194,33 @@ function MemberDetailsModal({ onClose }: { onClose: () => void }) {
             className="w-full sm:w-64 shrink-0"
           />
 
+          {/* Download PDF Button */}
+          <button
+            onClick={handleDownloadPdf}
+            type="button"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs sm:text-sm font-bold shadow-2xs cursor-pointer transition-all shrink-0 active:scale-98"
+            title={isSi ? 'තෝරාගත් ගමේ සාමාජික වාර්තා PDF බාගන්න' : 'Download Filtered Member PDF'}
+          >
+            <Printer className="w-4 h-4" />
+            <span>
+              {isSi 
+                ? (selectedFile !== 'all' ? `${selectedFile.replace(/\.[^/.]+$/, "")} PDF` : 'PDF බාගන්න') 
+                : (selectedFile !== 'all' ? `PDF (${selectedFile.replace(/\.[^/.]+$/, "")})` : 'Download PDF')}
+            </span>
+          </button>
+
           {/* Download CSV Button */}
           <button
             onClick={handleDownloadCsv}
             type="button"
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#003399] hover:bg-[#002266] text-white text-xs sm:text-sm font-bold shadow-2xs cursor-pointer transition-all shrink-0 active:scale-98"
+            className="inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-[#003399] hover:bg-[#002266] text-white text-xs sm:text-sm font-bold shadow-2xs cursor-pointer transition-all shrink-0 active:scale-98"
             title={isSi ? 'සාමාජික නාමාවලිය බාගන්න (CSV)' : 'Download Members Directory CSV'}
           >
             <Download className="w-4 h-4" />
             <span>
               {isSi 
-                ? (selectedFile !== 'all' ? `${selectedFile} බාගන්න` : 'CSV බාගන්න') 
-                : (selectedFile !== 'all' ? `Download ${selectedFile}` : 'Download (CSV)')}
+                ? (selectedFile !== 'all' ? `${selectedFile} (CSV)` : 'CSV') 
+                : (selectedFile !== 'all' ? `CSV (${selectedFile})` : 'CSV')}
             </span>
           </button>
         </div>
@@ -227,7 +248,7 @@ function MemberDetailsModal({ onClose }: { onClose: () => void }) {
         ) : (
           <div className="border border-neutral-200 rounded-xl overflow-hidden bg-white shadow-2xs">
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs sm:text-sm">
+              <table className="w-full text-left text-xs sm:text-sm" style={{ fontFamily: "'Noto Sans Sinhala', 'Iskoola Pota', 'Nirmala UI', sans-serif" }}>
                 <thead className="bg-slate-50 text-neutral-600 uppercase text-[11px] font-bold tracking-wider border-b border-neutral-200">
                   <tr>
                     <th className="py-3 px-4">{isSi ? 'සාමාජික අංකය' : 'Member No'}</th>
@@ -236,7 +257,6 @@ function MemberDetailsModal({ onClose }: { onClose: () => void }) {
                     <th className="py-3 px-4">{isSi ? 'ලිපිනය' : 'Address'}</th>
                     <th className="py-3 px-4">{isSi ? 'තැපැල් ලිපිනය' : 'Postal Address'}</th>
                     <th className="py-3 px-4">{isSi ? 'ස්ත්‍රී / පුරුෂ' : 'Gender'}</th>
-                    <th className="py-3 px-4">{isSi ? 'දුරකථනය' : 'Phone'}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-100 font-normal text-neutral-800">
@@ -263,9 +283,6 @@ function MemberDetailsModal({ onClose }: { onClose: () => void }) {
                             {m.gender}
                           </span>
                         ) : '—'}
-                      </td>
-                      <td className="py-3 px-4 text-neutral-600">
-                        {m.phone || '—'}
                       </td>
                     </tr>
                   ))}
@@ -384,6 +401,11 @@ function EligibleVotersModal({ onClose }: { onClose: () => void }) {
     window.open(url, '_blank');
   };
 
+  const handleDownloadPdf = () => {
+    const url = `/api/pdf/export?module=voters&file=${encodeURIComponent(selectedFile)}&autoprint=1`;
+    window.open(url, '_blank');
+  };
+
   return (
     <div className="flex flex-col h-full max-h-[90vh]">
       {/* Modal Header */}
@@ -450,18 +472,33 @@ function EligibleVotersModal({ onClose }: { onClose: () => void }) {
             className="w-full sm:w-64 shrink-0"
           />
 
+          {/* Download PDF Button */}
+          <button
+            onClick={handleDownloadPdf}
+            type="button"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs sm:text-sm font-bold shadow-2xs cursor-pointer transition-all shrink-0 active:scale-98"
+            title={isSi ? 'තෝරාගත් ගමේ ඡන්ද හිමි නාමලේඛනය PDF ලෙස බාගන්න' : 'Download Filtered Voter Register PDF'}
+          >
+            <Printer className="w-4 h-4" />
+            <span>
+              {isSi 
+                ? (selectedFile !== 'all' ? `${selectedFile.replace(/\.[^/.]+$/, "")} PDF` : 'PDF බාගන්න') 
+                : (selectedFile !== 'all' ? `PDF (${selectedFile.replace(/\.[^/.]+$/, "")})` : 'Download PDF')}
+            </span>
+          </button>
+
           {/* Download CSV Button */}
           <button
             onClick={handleDownloadCsv}
             type="button"
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#003399] hover:bg-[#002266] text-white text-xs sm:text-sm font-bold shadow-2xs cursor-pointer transition-all shrink-0 active:scale-98"
+            className="inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-[#003399] hover:bg-[#002266] text-white text-xs sm:text-sm font-bold shadow-2xs cursor-pointer transition-all shrink-0 active:scale-98"
             title={isSi ? 'තෝරාගත් ගොනුවේ ඡන්ද හිමි නාමලේඛනය බාගන්න' : 'Download Electoral Register CSV'}
           >
             <Download className="w-4 h-4" />
             <span>
               {isSi 
-                ? (selectedFile !== 'all' ? `${selectedFile} බාගන්න` : 'CSV බාගන්න') 
-                : (selectedFile !== 'all' ? `Download ${selectedFile}` : 'Download (CSV)')}
+                ? (selectedFile !== 'all' ? `${selectedFile} (CSV)` : 'CSV') 
+                : (selectedFile !== 'all' ? `CSV (${selectedFile})` : 'CSV')}
             </span>
           </button>
         </div>
@@ -489,7 +526,7 @@ function EligibleVotersModal({ onClose }: { onClose: () => void }) {
         ) : (
           <div className="border border-neutral-200 rounded-xl overflow-hidden bg-white shadow-2xs">
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs sm:text-sm">
+              <table className="w-full text-left text-xs sm:text-sm" style={{ fontFamily: "'Noto Sans Sinhala', 'Iskoola Pota', 'Nirmala UI', sans-serif" }}>
                 <thead className="bg-slate-50 text-neutral-600 uppercase text-[11px] font-bold tracking-wider border-b border-neutral-200">
                   <tr>
                     <th className="py-3 px-4">{isSi ? 'ඡන්ද / සාමාජික අංකය' : 'Voter No'}</th>
@@ -727,6 +764,14 @@ function ApplyMembershipModal({ onClose, auth }: { onClose: () => void; auth: an
           </div>
         </div>
 
+        <div className="w-full max-w-md p-3.5 rounded-xl bg-blue-50/80 border border-blue-200 text-blue-900 text-xs sm:text-[13px] leading-relaxed">
+          <p className="font-semibold">
+            {isSi 
+              ? '📌 කරුණාකර ඔබගේ අයදුම්පත උඩුගත කර අයදුම්පත රැගෙන කාර්යාලයට පැමිණෙන්න දින කීපයක් ඇතුළත.' 
+              : '📌 Please visit our office with the physical copy of your application within a few days.'}
+          </p>
+        </div>
+
         <button
           onClick={onClose}
           className="px-6 py-2.5 rounded-xl bg-[#003399] hover:bg-[#002673] text-white font-bold text-sm transition-all shadow-xs cursor-pointer"
@@ -885,6 +930,11 @@ function ApplyMembershipModal({ onClose, auth }: { onClose: () => void; auth: an
                 {isSi 
                   ? 'සියලුම තොරතුරු සත්‍ය හා නිවැරදි බවට තහවුරු කර අයදුම්පත ඉදිරිපත් කරන්න.' 
                   : 'Ensure all details provided match your legal identification documents for quick board approval.'}
+              </li>
+              <li className="font-semibold text-blue-900">
+                {isSi 
+                  ? 'ඔබගේ අයදුම්පත උඩුගත කර අයදුම්පත රැගෙන කාර්යාලයට පැමිණෙන්න දින කීපයක් ඇතුළත.' 
+                  : 'Please upload your application and visit our office with the physical copy within a few days.'}
               </li>
             </ul>
           </div>

@@ -22,13 +22,13 @@ export default function HeroSection() {
         
         {/* Official Sri Lanka Co-op Heritage Pill Badge */}
         <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-slate-900/80 backdrop-blur-md border border-white/20 text-xs text-slate-200 shadow-xl mb-6 hover:border-amber-400/40 transition-colors">
-          <div className="w-5 h-5 rounded-full overflow-hidden bg-white shrink-0 p-0.5 shadow-xs">
+          <div className="w-5 h-5 rounded-full overflow-hidden bg-[#8a004b] shrink-0 shadow-xs flex items-center justify-center">
             <Image
-              src="/logo-photo.jpg"
+              src="/Logo_new.jpeg"
               alt="Co-op Emblem"
-              width={20}
-              height={20}
-              className="w-full h-full object-contain"
+              width={30}
+              height={16}
+              className="w-auto h-3.5 max-w-none translate-y-[0.5px] object-contain"
             />
           </div>
           <span className="font-medium tracking-wide">{t('badgeMovement')}</span>
