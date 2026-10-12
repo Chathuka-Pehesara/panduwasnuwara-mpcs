@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { query as pgQuery } from '@/lib/db';
 import { getSetting, setSetting } from './setting';
 
 export interface LiveStats {
@@ -244,54 +245,61 @@ export async function getImportedMembersList(
  * Get distinct imported member files with count of records per file
  */
 export async function getMemberFiles(): Promise<{ fileName: string; displayName: string; count: number }[]> {
-  const { data, error } = await supabase
-    .from('imported_members')
-    .select('file_name, location');
+  try {
+    const rows = await pgQuery<{ file_name: string; count: number }>(`
+      SELECT 
+        COALESCE(NULLIF(TRIM(file_name), ''), CASE WHEN location IS NOT NULL AND TRIM(location) != '' THEN location || '.csv' ELSE 'general_members.csv' END) as file_name,
+        COUNT(*)::int as count
+      FROM imported_members
+      GROUP BY 1
+      ORDER BY count DESC
+    `);
 
-  if (error || !data) {
-    console.error('Error fetching member files:', error);
+    return rows.map(r => ({
+      fileName: r.file_name,
+      displayName: r.file_name.replace(/\.[^/.]+$/, ""),
+      count: Number(r.count) || 0
+    }));
+  } catch (err) {
+    console.error('Error fetching member files via pgQuery:', err);
     return [];
   }
-
-  const counts: Record<string, { fileName: string; displayName: string; count: number }> = {};
-  for (const row of data) {
-    const rawName = row.file_name && row.file_name.trim() 
-      ? row.file_name.trim() 
-      : (row.location && row.location.trim() ? `${row.location.trim()}.csv` : 'general_members.csv');
-    const dispName = rawName.replace(/\.[^/.]+$/, "");
-    if (!counts[rawName]) {
-      counts[rawName] = { fileName: rawName, displayName: dispName, count: 0 };
-    }
-    counts[rawName].count += 1;
-  }
-
-  return Object.values(counts).sort((a, b) => b.count - a.count);
 }
 
 /**
  * Fetch all imported member records for CSV download (filtered by file name if specified)
  */
 export async function getMembersForDownload(fileFilter?: string): Promise<any[]> {
-  let query = supabase
-    .from('imported_members')
-    .select('member_number, nic, full_name, address, postal_address, gender, phone, file_name')
-    .order('id', { ascending: true });
-
-  if (fileFilter && fileFilter.trim() && fileFilter.trim().toLowerCase() !== 'all') {
-    const f = fileFilter.trim();
-    if (f.toLowerCase() === 'unassigned') {
-      query = query.is('file_name', null);
-    } else {
-      query = query.or(`file_name.ilike.%${f}%,location.ilike.%${f}%`);
+  try {
+    if (!fileFilter || fileFilter.trim().toLowerCase() === 'all') {
+      return await pgQuery(`
+        SELECT member_number, nic, full_name, address, postal_address, gender, phone, file_name, location
+        FROM imported_members
+        ORDER BY id ASC
+      `);
     }
-  }
 
-  const { data, error } = await query;
-  if (error || !data) {
-    console.error('Error fetching members for download:', error);
+    const clean = fileFilter.trim();
+    if (clean.toLowerCase() === 'unassigned' || clean.toLowerCase() === 'general_members.csv' || clean.toLowerCase() === 'general_members') {
+      return await pgQuery(`
+        SELECT member_number, nic, full_name, address, postal_address, gender, phone, file_name, location
+        FROM imported_members
+        WHERE file_name IS NULL OR file_name = '' OR file_name ILIKE '%general_members%'
+        ORDER BY id ASC
+      `);
+    }
+
+    const baseName = clean.replace(/\.[^/.]+$/, "");
+    return await pgQuery(`
+      SELECT member_number, nic, full_name, address, postal_address, gender, phone, file_name, location
+      FROM imported_members
+      WHERE file_name ILIKE $1 OR file_name ILIKE $2 OR location ILIKE $1 OR location ILIKE $2
+      ORDER BY id ASC
+    `, [`%${clean}%`, `%${baseName}%`]);
+  } catch (err) {
+    console.error('Error fetching members for download via pgQuery:', err);
     return [];
   }
-  return data;
 }
 
 /**
@@ -312,7 +320,7 @@ export async function getEligibleVotersList(
 
   if (fileFilter && fileFilter.trim() && fileFilter.trim().toLowerCase() !== 'all') {
     const f = fileFilter.trim();
-    if (f.toLowerCase() === 'unassigned') {
+    if (f.toLowerCase() === 'unassigned' || f.toLowerCase() === 'general_register.csv' || f.toLowerCase() === 'general_register') {
       query = query.is('file_name', null);
     } else {
       query = query.or(`file_name.ilike.%${f}%,location.ilike.%${f}%`);
@@ -340,28 +348,25 @@ export async function getEligibleVotersList(
  * Get distinct voter files with count of records per file
  */
 export async function getVoterFiles(): Promise<{ fileName: string; displayName: string; count: number }[]> {
-  const { data, error } = await supabase
-    .from('eligible_voters')
-    .select('file_name, location');
+  try {
+    const rows = await pgQuery<{ file_name: string; count: number }>(`
+      SELECT 
+        COALESCE(NULLIF(TRIM(file_name), ''), CASE WHEN location IS NOT NULL AND TRIM(location) != '' THEN location || '.csv' ELSE 'general_register.csv' END) as file_name,
+        COUNT(*)::int as count
+      FROM eligible_voters
+      GROUP BY 1
+      ORDER BY count DESC
+    `);
 
-  if (error || !data) {
-    console.error('Error fetching voter files:', error);
+    return rows.map(r => ({
+      fileName: r.file_name,
+      displayName: r.file_name.replace(/\.[^/.]+$/, ""),
+      count: Number(r.count) || 0
+    }));
+  } catch (err) {
+    console.error('Error fetching voter files via pgQuery:', err);
     return [];
   }
-
-  const counts: Record<string, { fileName: string; displayName: string; count: number }> = {};
-  for (const row of data) {
-    const rawName = row.file_name && row.file_name.trim() 
-      ? row.file_name.trim() 
-      : (row.location && row.location.trim() ? `${row.location.trim()}.csv` : 'general_register.csv');
-    const dispName = rawName.replace(/\.[^/.]+$/, "");
-    if (!counts[rawName]) {
-      counts[rawName] = { fileName: rawName, displayName: dispName, count: 0 };
-    }
-    counts[rawName].count += 1;
-  }
-
-  return Object.values(counts).sort((a, b) => b.count - a.count);
 }
 
 /**
@@ -376,26 +381,36 @@ export async function getVoterLocations(): Promise<{ location: string; count: nu
  * Fetch all voter records for CSV download (filtered by file name if specified)
  */
 export async function getVotersForDownload(fileFilter?: string): Promise<any[]> {
-  let query = supabase
-    .from('eligible_voters')
-    .select('voter_number, member_number, nic, full_name, address, postal_address, gender, division, file_name')
-    .order('id', { ascending: true });
-
-  if (fileFilter && fileFilter.trim() && fileFilter.trim().toLowerCase() !== 'all') {
-    const f = fileFilter.trim();
-    if (f.toLowerCase() === 'unassigned') {
-      query = query.is('file_name', null);
-    } else {
-      query = query.or(`file_name.ilike.%${f}%,location.ilike.%${f}%`);
+  try {
+    if (!fileFilter || fileFilter.trim().toLowerCase() === 'all') {
+      return await pgQuery(`
+        SELECT voter_number, member_number, nic, full_name, address, postal_address, gender, division, file_name, location
+        FROM eligible_voters
+        ORDER BY id ASC
+      `);
     }
-  }
 
-  const { data, error } = await query;
-  if (error || !data) {
-    console.error('Error fetching voters for download:', error);
+    const clean = fileFilter.trim();
+    if (clean.toLowerCase() === 'unassigned' || clean.toLowerCase() === 'general_register.csv' || clean.toLowerCase() === 'general_register') {
+      return await pgQuery(`
+        SELECT voter_number, member_number, nic, full_name, address, postal_address, gender, division, file_name, location
+        FROM eligible_voters
+        WHERE file_name IS NULL OR file_name = '' OR file_name ILIKE '%general_register%'
+        ORDER BY id ASC
+      `);
+    }
+
+    const baseName = clean.replace(/\.[^/.]+$/, "");
+    return await pgQuery(`
+      SELECT voter_number, member_number, nic, full_name, address, postal_address, gender, division, file_name, location
+      FROM eligible_voters
+      WHERE file_name ILIKE $1 OR file_name ILIKE $2 OR location ILIKE $1 OR location ILIKE $2
+      ORDER BY id ASC
+    `, [`%${clean}%`, `%${baseName}%`]);
+  } catch (err) {
+    console.error('Error fetching voters for download via pgQuery:', err);
     return [];
   }
-  return data;
 }
 
 /**

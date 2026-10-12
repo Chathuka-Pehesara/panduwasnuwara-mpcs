@@ -23,6 +23,7 @@ import {
   Upload
 } from 'lucide-react';
 import { BusinessItem, BusinessServiceItem } from '@/lib/types';
+import { ruralBankBranches } from '@/lib/data/ruralBankBranches';
 
 const LOGO_PRESETS = [
   { label: 'Rural Bank', path: '/images/sections/rural-bank.png' },
@@ -34,14 +35,14 @@ const LOGO_PRESETS = [
   { label: 'Ristbury Tiara', path: '/images/sections/ristbury-tiara.png' },
   { label: 'Fuel Station', path: '/images/sections/fuel-station.png' },
   { label: 'Funeral Services', path: '/images/sections/funeral.png' },
-  { label: 'Main Logo', path: '/logo-photo.jpg' }
+  { label: 'Main Logo', path: '/Logo_new.jpeg' }
 ];
 
 const COVER_PRESETS = [
   { label: 'Annual Assembly', path: '/images/gallery/coop-annual-meeting.jpg' },
   { label: 'Excellence & Awards', path: '/images/gallery/coop-community-award.jpg' },
   { label: 'Logistics Fleet', path: '/images/news/driver-vacancy.jpg' },
-  { label: 'Main Headquarters', path: '/logo-photo.jpg' }
+  { label: 'Main Headquarters', path: '/Logo_new.jpeg' }
 ];
 
 export default function BusinessManagementTab() {
@@ -72,7 +73,7 @@ export default function BusinessManagementTab() {
   const [formManagers, setFormManagers] = useState<Array<{ branch: string; name: string; location: string; hotline: string }>>([
     { branch: '', name: '', location: '', hotline: '' }
   ]);
-  const [formImageSrc, setFormImageSrc] = useState('/logo-photo.jpg');
+  const [formImageSrc, setFormImageSrc] = useState('/Logo_new.jpeg');
   const [formCoverImage, setFormCoverImage] = useState('');
   const [formIsNew, setFormIsNew] = useState(false);
   const [formIsActive, setFormIsActive] = useState(true);
@@ -150,7 +151,7 @@ export default function BusinessManagementTab() {
     setFormManagers([
       { branch: '', name: '', location: 'සමිති ගොඩනැගිල්ල, හැට්ටිපොල', hotline: '037 229 1012' }
     ]);
-    setFormImageSrc('/logo-photo.jpg');
+    setFormImageSrc('/Logo_new.jpeg');
     setFormCoverImage('');
     setFormIsNew(false);
     setFormIsActive(true);
@@ -192,6 +193,13 @@ export default function BusinessManagementTab() {
           hotline: (b.managers && b.managers[1]?.hotline) || b.hotline || '037 229 1013'
         }
       ]);
+    } else if (b.key === 'rural-bank' && (!b.managers || b.managers.length <= 1)) {
+      setFormManagers(ruralBankBranches.map(rb => ({
+        branch: rb.branchNameEn || rb.branchNameSi,
+        name: rb.managerNameSi || rb.managerNameEn,
+        location: rb.addressSi || rb.addressEn,
+        hotline: rb.hotline
+      })));
     } else if (b.managers && Array.isArray(b.managers) && b.managers.length > 0) {
       setFormManagers(b.managers.map(m => ({
         branch: m.branch || '',
@@ -211,7 +219,7 @@ export default function BusinessManagementTab() {
     } else {
       setFormManagers([{ branch: '', name: '', location: '', hotline: '' }]);
     }
-    setFormImageSrc(b.image_src || '/logo-photo.jpg');
+    setFormImageSrc(b.image_src || '/Logo_new.jpeg');
     setFormCoverImage(b.cover_image || '');
     setFormIsNew(Boolean(b.is_new));
     setFormIsActive(b.is_active !== false);
@@ -351,7 +359,7 @@ export default function BusinessManagementTab() {
         location: primaryManager.location || null,
         hotline: primaryManager.hotline || null,
         managers: cleanManagers.length > 0 ? cleanManagers : undefined,
-        image_src: formImageSrc.trim() || '/logo-photo.jpg',
+        image_src: formImageSrc.trim() || '/Logo_new.jpeg',
         cover_image: formCoverImage.trim() || null,
         is_new: formIsNew,
         is_active: formIsActive,
@@ -680,13 +688,13 @@ export default function BusinessManagementTab() {
                   <div className="flex items-start gap-3.5 mb-3.5">
                     <div className="w-14 h-14 rounded-2xl bg-white border border-neutral-200/90 p-1.5 flex items-center justify-center shrink-0 shadow-2xs relative overflow-hidden group-hover:scale-105 transition-transform">
                       <Image
-                        src={b.image_src || '/logo-photo.jpg'}
+                        src={b.image_src || '/Logo_new.jpeg'}
                         alt={b.title_en}
                         width={56}
                         height={56}
                         className="w-full h-full object-contain"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = '/logo-photo.jpg';
+                          (e.target as HTMLImageElement).src = '/Logo_new.jpeg';
                         }}
                       />
                     </div>
@@ -1091,6 +1099,25 @@ export default function BusinessManagementTab() {
                       </div>
 
                       <div className="flex items-center gap-2 flex-wrap">
+                        {isRural && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormManagers(ruralBankBranches.map(rb => ({
+                                branch: rb.branchNameEn || rb.branchNameSi,
+                                name: rb.managerNameSi || rb.managerNameEn,
+                                location: rb.addressSi || rb.addressEn,
+                                hotline: rb.hotline
+                              })));
+                            }}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold shadow-2xs cursor-pointer transition-all shrink-0"
+                            title={locale === 'si' ? 'සම්මත ශාඛා 22 පූරණය කරන්න' : 'Load all 22 default branches'}
+                          >
+                            <RotateCw className="w-3.5 h-3.5" />
+                            <span>{locale === 'si' ? 'සම්මත ශාඛා 22 පූරණය' : 'Load 22 Defaults'}</span>
+                          </button>
+                        )}
+
                         <button
                           type="button"
                           onClick={handleAddManager}
@@ -1227,13 +1254,13 @@ export default function BusinessManagementTab() {
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                   <div className="w-14 h-14 rounded-2xl bg-white border border-neutral-200 p-1.5 flex items-center justify-center shrink-0 overflow-hidden shadow-2xs relative">
                     <Image
-                      src={formImageSrc || '/logo-photo.jpg'}
+                      src={formImageSrc || '/Logo_new.jpeg'}
                       alt="Logo Preview"
                       width={56}
                       height={56}
                       className="w-full h-full object-contain"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = '/logo-photo.jpg';
+                        (e.target as HTMLImageElement).src = '/Logo_new.jpeg';
                       }}
                     />
                   </div>

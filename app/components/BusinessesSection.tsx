@@ -334,7 +334,7 @@ export default function BusinessesSection() {
             managers: Array.isArray(b.managers)
               ? b.managers
               : (b.manager ? [{ name: b.manager, location: b.location || '', hotline: b.hotline || '' }] : []),
-            imageSrc: b.image_src || '/logo-photo.jpg',
+            imageSrc: b.image_src || '/Logo_new.jpeg',
             coverImage: b.cover_image || '',
             isNew: Boolean(b.is_new),
             services: Array.isArray(b.services) ? b.services : [],

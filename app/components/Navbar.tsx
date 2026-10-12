@@ -48,7 +48,7 @@ export default function Navbar() {
             titleEn: b.title_en,
             taglineSi: b.tagline_si || '',
             taglineEn: b.tagline_en || '',
-            imageSrc: b.image_src || '/logo-photo.jpg',
+            imageSrc: b.image_src || '/Logo_new.jpeg',
             isNew: Boolean(b.is_new)
           }));
           setNavBusinesses(mapped);
@@ -128,13 +128,14 @@ export default function Navbar() {
 
           {/* Logo & Brand */}
           <Link href={`/${locale}`} className="flex items-center gap-2.5 sm:gap-3.5 group shrink min-w-0">
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white flex items-center justify-center overflow-hidden shrink-0 border border-white/20">
+            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-[#8a004b] flex items-center justify-center overflow-hidden shrink-0 border border-white/20 shadow-xs group-hover:scale-105 transition-transform">
               <Image
-                src="/logo-photo.jpg"
-                alt="MPCS Logo"
-                width={44}
-                height={44}
-                className="object-cover"
+                src="/Logo_new.jpeg"
+                alt="MPCS Co-op Logo"
+                width={80}
+                height={43}
+                className="w-auto h-7 sm:h-8 max-w-none translate-y-[2px] object-contain"
+                priority
               />
             </div>
             <span className="font-semibold tracking-wide text-xs sm:text-sm lg:text-[13px] xl:text-sm hidden sm:block max-w-[190px] sm:max-w-[220px] lg:max-w-[210px] xl:max-w-[270px] 2xl:max-w-none leading-snug group-hover:text-neutral-200 transition-colors">
