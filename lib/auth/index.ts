@@ -6,8 +6,9 @@ export interface AuthContext {
   userId?: string | number;
   username: string;
   email?: string;
-  role: 'admin' | 'user';
+  role: 'admin' | 'user' | 'superadmin';
   isAdmin: boolean;
+  isSuperAdmin: boolean;
   supabaseUser?: any;
 }
 
@@ -56,17 +57,17 @@ export async function getAuthContext(req: NextRequest): Promise<AuthContext | nu
     if (supabase && token.includes('.') && token.split('.').length === 3) {
       const { data: { user }, error } = await supabase.auth.getUser(token);
       if (!error && user) {
-        const role =
-          user.app_metadata?.role === 'admin' || user.user_metadata?.role === 'admin'
-            ? 'admin'
-            : 'user';
+        const isSuper = user.app_metadata?.role === 'superadmin' || user.user_metadata?.role === 'superadmin';
+        const isAdmin = isSuper || user.app_metadata?.role === 'admin' || user.user_metadata?.role === 'admin';
+        const role = (isSuper ? 'superadmin' : (isAdmin ? 'admin' : 'user')) as 'admin' | 'user' | 'superadmin';
 
         return {
           userId: user.id,
           username: user.email || user.user_metadata?.username || user.id,
           email: user.email,
           role,
-          isAdmin: role === 'admin',
+          isAdmin,
+          isSuperAdmin: isSuper,
           supabaseUser: user
         };
       }
@@ -76,15 +77,22 @@ export async function getAuthContext(req: NextRequest): Promise<AuthContext | nu
     const parts = token.split('_');
     if (parts.length >= 3 && parts[0] === 'session') {
       const username = decodeURIComponent(parts[1]);
-      const role = (parts[2] === 'admin' ? 'admin' : 'user') as 'admin' | 'user';
+      const tokenRole = parts[2];
       const dbUser = await findUserByNicOrUsername(username);
+
+      const isRootSuper = username.toLowerCase() === 'superadmin';
+      const effectiveRole = dbUser?.role || tokenRole;
+      const isSuper = isRootSuper || effectiveRole === 'superadmin' || tokenRole === 'superadmin';
+      const isAdmin = isSuper || effectiveRole === 'admin' || tokenRole === 'admin';
+      const role = (isSuper ? 'superadmin' : (isAdmin ? 'admin' : 'user')) as 'admin' | 'user' | 'superadmin';
 
       return {
         userId: dbUser?.id,
         username,
         email: dbUser?.email || undefined,
-        role: (dbUser?.role || role) as 'admin' | 'user',
-        isAdmin: (dbUser?.role || role) === 'admin'
+        role,
+        isAdmin,
+        isSuperAdmin: isSuper
       };
     }
   } catch (err) {
@@ -100,6 +108,20 @@ export async function requireAdmin(req: NextRequest): Promise<{ auth: AuthContex
     return {
       auth: null,
       errorResponse: Response.json({ success: false, error: 'Unauthorized: Admin access required' }, { status: 401 })
+    };
+  }
+  return { auth };
+}
+
+/**
+ * Super admin verification helper.
+ */
+export async function requireSuperAdmin(req: NextRequest): Promise<{ auth: AuthContext | null; errorResponse?: Response }> {
+  const auth = await getAuthContext(req);
+  if (!auth || !auth.isSuperAdmin) {
+    return {
+      auth: null,
+      errorResponse: Response.json({ success: false, error: 'Unauthorized: Super Admin privileges required' }, { status: 403 })
     };
   }
   return { auth };
