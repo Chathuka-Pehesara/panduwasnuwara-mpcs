@@ -258,10 +258,24 @@ export default function Footer() {
 
       {/* Bottom Bar: Copyright with Left-Padding Protection */}
       <div className="w-full bg-[#050914] border-t border-white/10 py-5 px-6 sm:px-10 lg:px-16">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400 text-center sm:text-left pl-14 sm:pl-0">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-slate-400 text-center md:text-left pl-14 sm:pl-0">
           <p className="text-xs text-slate-400">
             {t('copyright')}
           </p>
+
+          <a
+            href="https://wa.me/94764247716"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-emerald-400 transition-colors group cursor-pointer"
+            title="Chat on WhatsApp"
+          >
+            <span>Designed By</span>
+            <span className="text-slate-300 font-semibold group-hover:text-emerald-400 group-hover:underline transition-colors">
+              Induwara Thathsara
+            </span>
+          </a>
+
           <div className="flex items-center gap-3.5 text-[11px] text-slate-400 font-medium">
             <Link href="/" className="hover:text-slate-200 transition-colors">{t('privacyPolicy')}</Link>
             <span className="w-px h-3 bg-white/15" />

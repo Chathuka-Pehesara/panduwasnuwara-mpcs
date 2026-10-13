@@ -208,21 +208,6 @@ function MemberDetailsModal({ onClose }: { onClose: () => void }) {
                 : (selectedFile !== 'all' ? `PDF (${selectedFile.replace(/\.[^/.]+$/, "")})` : 'Download PDF')}
             </span>
           </button>
-
-          {/* Download CSV Button */}
-          <button
-            onClick={handleDownloadCsv}
-            type="button"
-            className="inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-[#003399] hover:bg-[#002266] text-white text-xs sm:text-sm font-bold shadow-2xs cursor-pointer transition-all shrink-0 active:scale-98"
-            title={isSi ? 'සාමාජික නාමාවලිය බාගන්න (CSV)' : 'Download Members Directory CSV'}
-          >
-            <Download className="w-4 h-4" />
-            <span>
-              {isSi 
-                ? (selectedFile !== 'all' ? `${selectedFile} (CSV)` : 'CSV') 
-                : (selectedFile !== 'all' ? `CSV (${selectedFile})` : 'CSV')}
-            </span>
-          </button>
         </div>
       </div>
 
@@ -484,21 +469,6 @@ function EligibleVotersModal({ onClose }: { onClose: () => void }) {
               {isSi 
                 ? (selectedFile !== 'all' ? `${selectedFile.replace(/\.[^/.]+$/, "")} PDF` : 'PDF බාගන්න') 
                 : (selectedFile !== 'all' ? `PDF (${selectedFile.replace(/\.[^/.]+$/, "")})` : 'Download PDF')}
-            </span>
-          </button>
-
-          {/* Download CSV Button */}
-          <button
-            onClick={handleDownloadCsv}
-            type="button"
-            className="inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-[#003399] hover:bg-[#002266] text-white text-xs sm:text-sm font-bold shadow-2xs cursor-pointer transition-all shrink-0 active:scale-98"
-            title={isSi ? 'තෝරාගත් ගොනුවේ ඡන්ද හිමි නාමලේඛනය බාගන්න' : 'Download Electoral Register CSV'}
-          >
-            <Download className="w-4 h-4" />
-            <span>
-              {isSi 
-                ? (selectedFile !== 'all' ? `${selectedFile} (CSV)` : 'CSV') 
-                : (selectedFile !== 'all' ? `CSV (${selectedFile})` : 'CSV')}
             </span>
           </button>
         </div>

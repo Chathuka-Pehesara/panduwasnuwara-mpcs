@@ -4,10 +4,12 @@ import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { ArrowRight, Users, ShieldCheck, Building2, Award } from 'lucide-react';
+import { ArrowRight, Users, ShieldCheck, Award } from 'lucide-react';
+import { useMembership } from '@/app/context/MembershipContext';
 
 export default function HeroSection() {
   const t = useTranslations('Hero');
+  const { openModal } = useMembership();
 
   return (
     <section
@@ -61,19 +63,20 @@ export default function HeroSection() {
             <ArrowRight className="w-4 h-4" />
           </Link>
 
-          <Link
-            href="#director-board"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/25 text-white font-medium text-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
+          <button
+            type="button"
+            onClick={() => openModal('members')}
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/25 text-white font-medium text-sm transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
           >
             <span>{t('ctaBoard')}</span>
-          </Link>
+          </button>
         </div>
 
       </div>
 
       {/* Floating Glassmorphic Metric Ribbon at Hero Base */}
       <div className="relative z-10 w-full max-w-5xl mx-auto px-4 pb-8">
-        <div className="bg-slate-900/80 backdrop-blur-xl border border-white/15 rounded-2xl p-4 sm:p-5 shadow-2xl grid grid-cols-2 md:grid-cols-4 gap-4 divide-y md:divide-y-0 md:divide-x divide-white/10 text-center">
+        <div className="bg-slate-900/80 backdrop-blur-xl border border-white/15 rounded-2xl p-4 sm:p-5 shadow-2xl grid grid-cols-1 sm:grid-cols-3 gap-4 divide-y sm:divide-y-0 sm:divide-x divide-white/10 text-center">
           
           <div className="flex flex-col items-center justify-center px-2">
             <div className="flex items-center gap-1.5 text-amber-400 mb-0.5">
@@ -83,15 +86,7 @@ export default function HeroSection() {
             <span className="text-xs text-slate-400 font-medium">{t('statYearsLabel')}</span>
           </div>
 
-          <div className="flex flex-col items-center justify-center px-2 pt-3 md:pt-0">
-            <div className="flex items-center gap-1.5 text-emerald-400 mb-0.5">
-              <Building2 className="w-4 h-4" />
-              <span className="text-base sm:text-lg font-bold">{t('statUnits')}</span>
-            </div>
-            <span className="text-xs text-slate-400 font-medium">{t('statUnitsLabel')}</span>
-          </div>
-
-          <div className="flex flex-col items-center justify-center px-2 pt-3 md:pt-0">
+          <div className="flex flex-col items-center justify-center px-2 pt-3 sm:pt-0">
             <div className="flex items-center gap-1.5 text-sky-400 mb-0.5">
               <Users className="w-4 h-4" />
               <span className="text-base sm:text-lg font-bold">{t('statMembers')}</span>
@@ -99,7 +94,7 @@ export default function HeroSection() {
             <span className="text-xs text-slate-400 font-medium">{t('statMembersLabel')}</span>
           </div>
 
-          <div className="flex flex-col items-center justify-center px-2 pt-3 md:pt-0">
+          <div className="flex flex-col items-center justify-center px-2 pt-3 sm:pt-0">
             <div className="flex items-center gap-1.5 text-rose-400 mb-0.5">
               <ShieldCheck className="w-4 h-4" />
               <span className="text-base sm:text-lg font-bold">{t('statReg')}</span>
