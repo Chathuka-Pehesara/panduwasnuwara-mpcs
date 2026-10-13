@@ -29,7 +29,7 @@ export interface BusinessService {
   manager: string;
   location: string;
   hotline: string;
-  managers?: Array<{ branch?: string; name: string; location?: string; hotline?: string }>;
+  managers?: Array<{ branch?: string; name: string; location?: string; hotline?: string; isRegional?: boolean }>;
   imageSrc: string;
   coverImage?: string;
   isNew?: boolean;
@@ -102,9 +102,23 @@ export const businessesData: BusinessService[] = [
       },
       {
         branch: 'Store Manager',
-        name: '',
+        name: 'නිමාලි සංජීවනී',
         location: 'පාරිභෝගික අංශය, සමිති ගොඩනැගිල්ල, හැට්ටිපොල',
-        hotline: '037 229 1013'
+        hotline: '0705268848'
+      },
+      {
+        branch: 'හැට්ටිපොල ප්‍රාදේශිකය',
+        name: 'කේ. ඒ. පෙරේරා',
+        location: 'හැට්ටිපොල',
+        hotline: '037 229 1013',
+        isRegional: true
+      },
+      {
+        branch: 'මොරගනේ ප්‍රාදේශිකය',
+        name: 'එම්. ඩී. බණ්ඩාර',
+        location: 'මොරගනේ',
+        hotline: '037 229 1015',
+        isRegional: true
       }
     ]
   },
@@ -564,64 +578,139 @@ export default function BusinessesSection() {
                 </div>
 
                 {/* Key Contact & Location Details */}
-                {selectedBusiness.managers && selectedBusiness.managers.length > 1 ? (
-                  <div className="pt-2 border-t border-neutral-200/60 space-y-2">
-                    <span className="block text-[10px] text-neutral-400 font-bold uppercase tracking-wider">
-                      {isSi ? 'අංශ කළමනාකාරීත්වය සහ ශාඛා' : 'Department Managers & Branches'}
-                    </span>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                      {selectedBusiness.managers.map((m, mIdx) => (
-                        <div key={mIdx} className="p-3 rounded-xl bg-slate-50 border border-neutral-200/80 space-y-1.5 text-xs">
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <UserCheck className="w-3.5 h-3.5 text-[#003399] shrink-0" />
-                              <span className="font-bold text-neutral-900 truncate">
-                                {m.name || m.branch || (isSi ? `කළමනාකරු #${mIdx + 1}` : `Manager #${mIdx + 1}`)}
-                              </span>
-                            </div>
-                            {m.branch && (
-                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-[#003399] border border-blue-200/60 shrink-0">
-                                {m.branch}
-                              </span>
-                            )}
+                {(() => {
+                  const isRegionalBranch = (m: any) => Boolean(
+                    m.isRegional || 
+                    m.branch?.includes('ප්‍රාදේශික') || 
+                    m.branch?.toLowerCase().includes('regional')
+                  );
+                  const allManagers = selectedBusiness.managers || [];
+                  const regionalBranches = allManagers.filter(m => isRegionalBranch(m));
+                  const deptManagers = allManagers.filter(m => !isRegionalBranch(m));
+
+                  return (
+                    <div className="pt-2 border-t border-neutral-200/60 space-y-5">
+                      {/* Department Managers */}
+                      {deptManagers.length > 0 && (
+                        <div className="space-y-2">
+                          <span className="block text-[10px] text-neutral-400 font-bold uppercase tracking-wider">
+                            {isSi ? 'අංශ කළමනාකාරීත්වය' : 'Department Managers'}
+                          </span>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            {deptManagers.map((m, mIdx) => (
+                              <div key={mIdx} className="p-3 rounded-xl bg-slate-50 border border-neutral-200/80 space-y-1.5 text-xs">
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <UserCheck className="w-3.5 h-3.5 text-[#003399] shrink-0" />
+                                    <span className="font-bold text-neutral-900 truncate">
+                                      {m.name || m.branch || (isSi ? `කළමනාකරු #${mIdx + 1}` : `Manager #${mIdx + 1}`)}
+                                    </span>
+                                  </div>
+                                  {m.branch && (
+                                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-[#003399] border border-blue-200/60 shrink-0">
+                                      {m.branch}
+                                    </span>
+                                  )}
+                                </div>
+                                {m.location && (
+                                  <div className="flex items-center gap-2 text-neutral-500 text-[11px] truncate">
+                                    <MapPin className="w-3 h-3 text-neutral-400 shrink-0" />
+                                    <span className="truncate">{m.location}</span>
+                                  </div>
+                                )}
+                                {m.hotline && (
+                                  <div className="flex items-center gap-2 text-[11px] font-mono font-semibold text-neutral-700">
+                                    <Phone className="w-3 h-3 text-amber-600 shrink-0" />
+                                    <a href={`tel:${m.hotline.replace(/\s+/g, '')}`} className="hover:text-[#003399]">
+                                      {m.hotline}
+                                    </a>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
                           </div>
-                          {m.location && (
-                            <div className="flex items-center gap-2 text-neutral-500 text-[11px] truncate">
-                              <MapPin className="w-3 h-3 text-neutral-400 shrink-0" />
-                              <span className="truncate">{m.location}</span>
+                        </div>
+                      )}
+
+                      {/* Regional Branches Section (ප්‍රාදේශික) */}
+                      {(regionalBranches.length > 0 || selectedBusiness.key === 'consumer') && (
+                        <div className="space-y-2.5 pt-2 border-t border-neutral-100">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-neutral-900 flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-emerald-600" />
+                              {isSi ? 'ප්‍රාදේශික ශාඛා (Regional Branches)' : 'Regional Branches (ප්‍රාදේශික)'}
+                            </span>
+                            <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              {regionalBranches.length} {isSi ? 'ශාඛා' : 'Branches'}
+                            </span>
+                          </div>
+
+                          {regionalBranches.length > 0 ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                              {regionalBranches.map((rb, rbIdx) => (
+                                <div key={rbIdx} className="p-3 rounded-xl bg-emerald-50/40 border border-emerald-200/70 space-y-1.5 text-xs">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <div className="font-bold text-neutral-900 truncate">
+                                      {rb.branch || (isSi ? `ප්‍රාදේශිකය #${rbIdx + 1}` : `Branch #${rbIdx + 1}`)}
+                                    </div>
+                                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100/80 text-emerald-800 border border-emerald-200 shrink-0">
+                                      {isSi ? 'ප්‍රාදේශික' : 'Regional'}
+                                    </span>
+                                  </div>
+                                  {rb.name && (
+                                    <div className="flex items-center gap-1.5 text-neutral-700 text-[11px] font-medium">
+                                      <UserCheck className="w-3 h-3 text-emerald-700 shrink-0" />
+                                      <span className="truncate">{rb.name}</span>
+                                    </div>
+                                  )}
+                                  {rb.location && (
+                                    <div className="flex items-center gap-1.5 text-neutral-500 text-[11px] truncate">
+                                      <MapPin className="w-3 h-3 text-neutral-400 shrink-0" />
+                                      <span className="truncate">{rb.location}</span>
+                                    </div>
+                                  )}
+                                  {rb.hotline && (
+                                    <div className="flex items-center gap-1.5 text-[11px] font-mono font-semibold text-neutral-800">
+                                      <Phone className="w-3 h-3 text-emerald-600 shrink-0" />
+                                      <a href={`tel:${rb.hotline.replace(/\s+/g, '')}`} className="hover:text-emerald-700">
+                                        {rb.hotline}
+                                      </a>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
                             </div>
-                          )}
-                          {m.hotline && (
-                            <div className="flex items-center gap-2 text-[11px] font-mono font-semibold text-neutral-700">
-                              <Phone className="w-3 h-3 text-amber-600 shrink-0" />
-                              <a href={`tel:${m.hotline.replace(/\s+/g, '')}`} className="hover:text-[#003399]">
-                                {m.hotline}
-                              </a>
-                            </div>
+                          ) : (
+                            <p className="text-[11px] text-neutral-400 italic">
+                              {isSi ? 'ප්‍රාදේශික ශාඛා ඇතුළත් කර නොමැත.' : 'No regional branches configured yet.'}
+                            </p>
                           )}
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="pt-2 border-t border-neutral-200/60 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-neutral-600">
-                    <div className="flex items-center gap-3 p-3.5 rounded-xl bg-slate-50 border border-neutral-200/80">
-                      <UserCheck className="w-4 h-4 text-neutral-700 shrink-0" />
-                      <div className="truncate">
-                        <span className="block text-[10px] text-neutral-400 font-bold uppercase tracking-wider">{t('manager')}</span>
-                        <span className="font-semibold text-neutral-800 truncate block mt-0.5">{selectedBusiness.manager}</span>
-                      </div>
-                    </div>
+                      )}
 
-                    <div className="flex items-start gap-3 p-3.5 rounded-xl bg-slate-50 border border-neutral-200/80">
-                      <MapPin className="w-4 h-4 text-neutral-700 shrink-0 mt-0.5" />
-                      <div>
-                        <span className="block text-[10px] text-neutral-400 font-bold uppercase tracking-wider">{t('location')}</span>
-                        <span className="font-semibold text-neutral-800 block mt-0.5">{selectedBusiness.location}</span>
-                      </div>
+                      {/* Fallback Single Manager & Location if no multiple managers */}
+                      {allManagers.length === 0 && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-neutral-600">
+                          <div className="flex items-center gap-3 p-3.5 rounded-xl bg-slate-50 border border-neutral-200/80">
+                            <UserCheck className="w-4 h-4 text-neutral-700 shrink-0" />
+                            <div className="truncate">
+                              <span className="block text-[10px] text-neutral-400 font-bold uppercase tracking-wider">{t('manager')}</span>
+                              <span className="font-semibold text-neutral-800 truncate block mt-0.5">{selectedBusiness.manager}</span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-start gap-3 p-3.5 rounded-xl bg-slate-50 border border-neutral-200/80">
+                            <MapPin className="w-4 h-4 text-neutral-700 shrink-0 mt-0.5" />
+                            <div>
+                              <span className="block text-[10px] text-neutral-400 font-bold uppercase tracking-wider">{t('location')}</span>
+                              <span className="font-semibold text-neutral-800 block mt-0.5">{selectedBusiness.location}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
 
               {/* Fixed Bottom Action Bar */}

@@ -43,9 +43,23 @@ export const INITIAL_BUSINESSES = [
       },
       {
         branch: 'Store Manager',
-        name: '',
+        name: 'නිමාලි සංජීවනී',
         location: 'පාරිභෝගික අංශය, සමිති ගොඩනැගිල්ල, හැට්ටිපොල',
-        hotline: '037 229 1013'
+        hotline: '0705268848'
+      },
+      {
+        branch: 'හැට්ටිපොල ප්‍රාදේශිකය',
+        name: 'කේ. ඒ. පෙරේරා',
+        location: 'හැට්ටිපොල',
+        hotline: '037 229 1013',
+        isRegional: true
+      },
+      {
+        branch: 'මොරගනේ ප්‍රාදේශිකය',
+        name: 'එම්. ඩී. බණ්ඩාර',
+        location: 'මොරගනේ',
+        hotline: '037 229 1015',
+        isRegional: true
       }
     ],
     isNew: false,

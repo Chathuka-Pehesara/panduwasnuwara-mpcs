@@ -387,6 +387,146 @@ export default function BusinessDetailPage() {
       </section>
 
 
+      {/* 2.5 REGIONAL BRANCHES (ප්‍රාදේශික) SECTION */}
+      {(() => {
+        const isRegionalBranch = (m: any) => Boolean(
+          m?.isRegional || 
+          m?.branch?.includes('ප්‍රාදේශික') || 
+          m?.branch?.toLowerCase().includes('regional')
+        );
+        const regionalBranches = (business.managers || []).filter(m => isRegionalBranch(m));
+        
+        if (businessKey === 'consumer' || regionalBranches.length > 0) {
+          return (
+            <section className="w-full py-14 sm:py-18 bg-white border-t border-neutral-200/80 px-4 sm:px-6 lg:px-8">
+              <div className="max-w-6xl mx-auto space-y-8">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-1.5 h-4 bg-emerald-600 rounded-full shrink-0" />
+                    <span className="text-xs sm:text-sm font-bold tracking-wider text-emerald-700 uppercase">
+                      {isSi ? 'ප්‍රාදේශික ජාලය' : 'Regional Network'}
+                    </span>
+                  </div>
+                  <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+                    <div>
+                      <h2 className="font-condensed text-2xl sm:text-3xl font-extrabold text-neutral-900 tracking-tight">
+                        {isSi ? 'ප්‍රාදේශික ශාඛා' : 'Regional Branches'} <span className="text-emerald-700 font-normal">({isSi ? 'Regional Branches' : 'ප්‍රාදේශික'})</span>
+                      </h2>
+                      <p className="text-xs sm:text-sm text-neutral-600 mt-1">
+                        {isSi 
+                          ? 'පාරිභෝගික අංශය යටතේ ක්‍රියාත්මක වන ප්‍රාදේශික ශාඛා ජාලය, කළමනාකාරීත්වය සහ සෘජු ක්ෂණික ඇමතුම් තොරතුරු.'
+                          : 'Regional branches network, branch managers, locations, and direct hotline contact numbers under the Consumer division.'}
+                      </p>
+                    </div>
+                    {regionalBranches.length > 0 && (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold shrink-0 self-start sm:self-auto">
+                        <span className="w-2 h-2 rounded-full bg-emerald-600" />
+                        <span>{regionalBranches.length} {isSi ? 'ප්‍රාදේශික ශාඛා' : 'Regional Branches'}</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {regionalBranches.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {regionalBranches.map((rb, rIdx) => {
+                      const cleanRbHotline = (rb.hotline || '').replace(/\s+/g, '');
+                      return (
+                        <div
+                          key={rIdx}
+                          className="group bg-white rounded-2xl border border-emerald-200/80 hover:border-emerald-400 p-5 sm:p-6 shadow-xs hover:shadow-md transition-all duration-200 space-y-4 flex flex-col justify-between relative overflow-hidden"
+                        >
+                          <div className="space-y-3.5">
+                            <div className="flex items-center justify-between">
+                              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200/80 flex items-center justify-center font-bold font-mono text-sm group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                                {String(rIdx + 1).padStart(2, '0')}
+                              </div>
+                              <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                {isSi ? 'ප්‍රාදේශිකය' : 'Regional Branch'}
+                              </span>
+                            </div>
+
+                            <div className="space-y-1">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 font-mono block">
+                                {isSi ? 'නම (Name)' : 'Branch Name (Name)'}
+                              </span>
+                              <h3 className="font-condensed text-lg sm:text-xl font-bold text-neutral-900 group-hover:text-emerald-700 transition-colors">
+                                {rb.branch || (isSi ? `ප්‍රාදේශික ශාඛාව #${rIdx + 1}` : `Regional Branch #${rIdx + 1}`)}
+                              </h3>
+                            </div>
+
+                            <div className="pt-3 border-t border-neutral-100 space-y-2.5 text-xs">
+                              <div className="flex items-start gap-2.5">
+                                <UserCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                                <div>
+                                  <span className="text-[10px] uppercase font-bold text-neutral-400 block tracking-wider">
+                                    {isSi ? 'කළමනාකරු (Manager)' : 'Manager'}
+                                  </span>
+                                  <span className="font-semibold text-neutral-800 text-xs sm:text-sm">
+                                    {rb.name || (isSi ? 'පත් කර නොමැත' : 'To be appointed')}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {rb.location && (
+                                <div className="flex items-start gap-2.5">
+                                  <MapPin className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                                  <div>
+                                    <span className="text-[10px] uppercase font-bold text-neutral-400 block tracking-wider">
+                                      {isSi ? 'ස්ථානය (Location)' : 'Location'}
+                                    </span>
+                                    <span className="text-neutral-700 font-medium">
+                                      {rb.location}
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {rb.hotline ? (
+                            <div className="pt-3.5 border-t border-emerald-100/90 flex items-center justify-between">
+                              <div>
+                                <span className="text-[10px] uppercase font-bold text-neutral-400 block tracking-wider">
+                                  {isSi ? 'ක්ෂණික ඇමතුම් (Hotline)' : 'Hotline'}
+                                </span>
+                                <a
+                                  href={`tel:${cleanRbHotline}`}
+                                  className="font-mono text-xs sm:text-sm font-bold text-neutral-900 hover:text-emerald-700"
+                                >
+                                  {rb.hotline}
+                                </a>
+                              </div>
+                              <a
+                                href={`tel:${cleanRbHotline}`}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors shadow-2xs"
+                              >
+                                <Phone className="w-3 h-3" />
+                                <span>{isSi ? 'අමතන්න' : 'Call'}</span>
+                              </a>
+                            </div>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="p-8 rounded-2xl bg-neutral-50 border border-dashed border-neutral-300 text-center space-y-2">
+                    <p className="text-xs font-semibold text-neutral-600">
+                      {isSi ? 'තවමත් ප්‍රාදේශික ශාඛා ලියාපදිංචි කර නොමැත.' : 'No regional branches added yet.'}
+                    </p>
+                    <p className="text-[11px] text-neutral-400">
+                      {isSi ? 'පරිපාලක පුවරුවෙන් (Admin Panel) නව ප්‍රාදේශික ශාඛා ඇතුළත් කළ හැක.' : 'Add regional branches from the Admin Panel under Business Divisions.'}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </section>
+          );
+        }
+        return null;
+      })()}
+
       {/* 3. BUSINESS PAGE BOTTOM DETAILS (CONTACT MANAGER, LOCATION, HOTLINE, SEND INQUIRY) */}
       <section className="w-full py-14 sm:py-18 bg-slate-100/70 border-t border-neutral-200/80 px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto space-y-8">
@@ -410,121 +550,240 @@ export default function BusinessDetailPage() {
 
           {/* Bottom Details Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-            {business.managers && business.managers.length > 1 ? (
-              business.managers.map((mgr, mIdx) => {
+            {(() => {
+              const isRegionalBranch = (m: any) => Boolean(
+                m?.isRegional || 
+                m?.branch?.includes('ප්‍රාදේශික') || 
+                m?.branch?.toLowerCase().includes('regional')
+              );
+              const allManagers = business.managers || [];
+              const deptManagers = businessKey === 'consumer'
+                ? allManagers.filter(m => !isRegionalBranch(m))
+                : allManagers;
+
+              if (deptManagers.length > 1) {
+                return deptManagers.map((mgr, mIdx) => {
+                  const mgrCleanHotline = (mgr.hotline || '').replace(/\s+/g, '');
+                  return (
+                    <div key={mIdx} className="bg-white rounded-2xl border border-neutral-200/90 p-5 shadow-xs space-y-3 flex flex-col justify-between">
+                      <div className="space-y-2.5">
+                        <div className="w-10 h-10 rounded-xl bg-slate-100 text-neutral-700 flex items-center justify-center border border-neutral-200">
+                          <UserCheck className="w-5 h-5 text-[#003399]" />
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-[#003399] block font-mono">
+                            {mgr.branch ? mgr.branch : (isSi ? `කළමනාකරු #${mIdx + 1}` : `Manager #${mIdx + 1}`)}
+                          </span>
+                          <h4 className="font-condensed text-sm sm:text-base font-bold text-neutral-900 mt-0.5">
+                            {mgr.name || (isSi ? 'පත් කිරීමට නියමිතයි' : 'To be appointed')}
+                          </h4>
+                          {mgr.location && (
+                            <p className="text-xs text-neutral-600 mt-1.5 flex items-start gap-1.5">
+                              <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                              <span>{mgr.location}</span>
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {mgr.hotline ? (
+                        <div className="pt-2 border-t border-neutral-100 flex items-center justify-between">
+                          <a
+                            href={`tel:${mgrCleanHotline}`}
+                            className="font-mono text-xs font-bold text-neutral-900 hover:text-[#003399]"
+                          >
+                            {mgr.hotline}
+                          </a>
+                          <a
+                            href={`tel:${mgrCleanHotline}`}
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-[#003399] hover:underline"
+                          >
+                            <Phone className="w-2.5 h-2.5" />
+                            <span>{isSi ? 'අමතන්න' : 'Call'}</span>
+                          </a>
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                });
+              } else if (deptManagers.length === 1) {
+                const mgr = deptManagers[0];
                 const mgrCleanHotline = (mgr.hotline || '').replace(/\s+/g, '');
                 return (
-                  <div key={mIdx} className="bg-white rounded-2xl border border-neutral-200/90 p-5 shadow-xs space-y-3 flex flex-col justify-between">
-                    <div className="space-y-2.5">
-                      <div className="w-10 h-10 rounded-xl bg-slate-100 text-neutral-700 flex items-center justify-center border border-neutral-200">
-                        <UserCheck className="w-5 h-5 text-[#003399]" />
+                  <>
+                    <div className="bg-white rounded-2xl border border-neutral-200/90 p-5 shadow-xs space-y-3 flex flex-col justify-between">
+                      <div className="space-y-2.5">
+                        <div className="w-10 h-10 rounded-xl bg-slate-100 text-neutral-700 flex items-center justify-center border border-neutral-200">
+                          <UserCheck className="w-5 h-5 text-[#003399]" />
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-[#003399] block font-mono">
+                            {mgr.branch || (isSi ? 'අංශ කළමනාකරු' : 'Contact Manager')}
+                          </span>
+                          <h4 className="font-condensed text-sm sm:text-base font-bold text-neutral-900 mt-0.5">
+                            {mgr.name || business.manager}
+                          </h4>
+                        </div>
                       </div>
-                      <div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#003399] block font-mono">
-                          {mgr.branch ? mgr.branch : (isSi ? `කළමනාකරු #${mIdx + 1}` : `Manager #${mIdx + 1}`)}
-                        </span>
-                        <h4 className="font-condensed text-sm sm:text-base font-bold text-neutral-900 mt-0.5">
-                          {mgr.name || (isSi ? 'පත් කිරීමට නියමිතයි' : 'To be appointed')}
-                        </h4>
-                        {mgr.location && (
-                          <p className="text-xs text-neutral-600 mt-1.5 flex items-start gap-1.5">
-                            <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
-                            <span>{mgr.location}</span>
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {mgr.hotline ? (
-                      <div className="pt-2 border-t border-neutral-100 flex items-center justify-between">
-                        <a
-                          href={`tel:${mgrCleanHotline}`}
-                          className="font-mono text-xs font-bold text-neutral-900 hover:text-[#003399]"
-                        >
-                          {mgr.hotline}
-                        </a>
-                        <a
-                          href={`tel:${mgrCleanHotline}`}
-                          className="inline-flex items-center gap-1 text-[11px] font-bold text-[#003399] hover:underline"
-                        >
-                          <Phone className="w-2.5 h-2.5" />
-                          <span>{isSi ? 'අමතන්න' : 'Call'}</span>
-                        </a>
-                      </div>
-                    ) : null}
-                  </div>
-                );
-              })
-            ) : (
-              <>
-                {/* 1. Contact Manager */}
-                <div className="bg-white rounded-2xl border border-neutral-200/90 p-5 shadow-xs space-y-3 flex flex-col justify-between">
-                  <div className="space-y-2.5">
-                    <div className="w-10 h-10 rounded-xl bg-slate-100 text-neutral-700 flex items-center justify-center border border-neutral-200">
-                      <UserCheck className="w-5 h-5 text-[#003399]" />
-                    </div>
-                    <div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
-                        {isSi ? 'අංශ කළමනාකරු' : 'Contact Manager'}
-                      </span>
-                      <h4 className="font-condensed text-sm sm:text-base font-bold text-neutral-900 mt-0.5">
-                        {business.manager}
-                      </h4>
-                    </div>
-                  </div>
-                  <p className="text-[11px] text-neutral-500">
-                    {isSi ? 'අංශයේ ප්‍රධාන මෙහෙයුම් නිලධාරී' : 'Head of Department Operations'}
-                  </p>
-                </div>
-
-                {/* 2. Location */}
-                <div className="bg-white rounded-2xl border border-neutral-200/90 p-5 shadow-xs space-y-3 flex flex-col justify-between">
-                  <div className="space-y-2.5">
-                    <div className="w-10 h-10 rounded-xl bg-slate-100 text-neutral-700 flex items-center justify-center border border-neutral-200">
-                      <MapPin className="w-5 h-5 text-emerald-600" />
-                    </div>
-                    <div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
-                        {isSi ? 'ස්ථානය' : 'Location'}
-                      </span>
-                      <p className="text-xs sm:text-sm font-semibold text-neutral-800 leading-snug mt-0.5">
-                        {business.location}
+                      <p className="text-[11px] text-neutral-500">
+                        {isSi ? 'අංශයේ මෙහෙයුම් කළමනාකාරීත්වය' : 'Department Operations'}
                       </p>
                     </div>
-                  </div>
-                  <p className="text-[11px] text-neutral-500">
-                    {isSi ? 'සඳුදා - සෙනසුරාදා' : 'Open Mon - Sat'}
-                  </p>
-                </div>
 
-                {/* 3. Hotline */}
-                <div className="bg-white rounded-2xl border border-neutral-200/90 p-5 shadow-xs space-y-3 flex flex-col justify-between">
-                  <div className="space-y-2.5">
-                    <div className="w-10 h-10 rounded-xl bg-slate-100 text-neutral-700 flex items-center justify-center border border-neutral-200">
-                      <Phone className="w-5 h-5 text-amber-600" />
+                    <div className="bg-white rounded-2xl border border-neutral-200/90 p-5 shadow-xs space-y-3 flex flex-col justify-between">
+                      <div className="space-y-2.5">
+                        <div className="w-10 h-10 rounded-xl bg-slate-100 text-neutral-700 flex items-center justify-center border border-neutral-200">
+                          <MapPin className="w-5 h-5 text-emerald-600" />
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
+                            {isSi ? 'ස්ථානය' : 'Location'}
+                          </span>
+                          <p className="text-xs sm:text-sm font-semibold text-neutral-800 leading-snug mt-0.5">
+                            {mgr.location || business.location}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-neutral-500">
+                        {isSi ? 'සඳුදා - සෙනසුරාදා' : 'Open Mon - Sat'}
+                      </p>
                     </div>
-                    <div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
-                        {isSi ? 'ක්ෂණික ඇමතුම් අංකය' : 'Hotline'}
+
+                    <div className="bg-white rounded-2xl border border-neutral-200/90 p-5 shadow-xs space-y-3 flex flex-col justify-between">
+                      <div className="space-y-2.5">
+                        <div className="w-10 h-10 rounded-xl bg-slate-100 text-neutral-700 flex items-center justify-center border border-neutral-200">
+                          <Phone className="w-5 h-5 text-amber-600" />
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
+                            {isSi ? 'ක්ෂණික ඇමතුම්' : 'Hotline'}
+                          </span>
+                          <p className="font-mono text-sm sm:text-base font-bold text-neutral-900 mt-0.5">
+                            {mgr.hotline || business.hotline}
+                          </p>
+                        </div>
+                      </div>
+                      {mgrCleanHotline ? (
+                        <a
+                          href={`tel:${mgrCleanHotline}`}
+                          className="inline-flex items-center gap-1.5 text-xs font-bold text-[#003399] hover:underline"
+                        >
+                          <Phone className="w-3 h-3" />
+                          <span>{isSi ? 'දැන් අමතන්න' : 'Call Now'}</span>
+                        </a>
+                      ) : null}
+                    </div>
+
+                    <div className="bg-white rounded-2xl border border-neutral-200/90 p-5 shadow-xs space-y-3 flex flex-col justify-between">
+                      <div className="space-y-2.5">
+                        <div className="w-10 h-10 rounded-xl bg-slate-100 text-neutral-700 flex items-center justify-center border border-neutral-200">
+                          <HelpCircle className="w-5 h-5 text-purple-600" />
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
+                            {isSi ? 'විමසීම්' : 'General Inquiry'}
+                          </span>
+                          <p className="text-xs font-medium text-neutral-600 mt-0.5">
+                            {isSi ? 'පහත පෝරමයෙන් අප වෙත පණිවිඩයක් එවන්න' : 'Send an inquiry using form below'}
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-[11px] text-[#003399] font-semibold">
+                        {isSi ? 'පැය 24ක් තුළ ප්‍රතිචාර' : 'Response within 24h'}
                       </span>
+                    </div>
+                  </>
+                );
+              } else {
+                return (
+                  <>
+                    {/* 1. Contact Manager */}
+                    <div className="bg-white rounded-2xl border border-neutral-200/90 p-5 shadow-xs space-y-3 flex flex-col justify-between">
+                      <div className="space-y-2.5">
+                        <div className="w-10 h-10 rounded-xl bg-slate-100 text-neutral-700 flex items-center justify-center border border-neutral-200">
+                          <UserCheck className="w-5 h-5 text-[#003399]" />
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
+                            {isSi ? 'අංශ කළමනාකරු' : 'Contact Manager'}
+                          </span>
+                          <h4 className="font-condensed text-sm sm:text-base font-bold text-neutral-900 mt-0.5">
+                            {business.manager}
+                          </h4>
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-neutral-500">
+                        {isSi ? 'අංශයේ ප්‍රධාන මෙහෙයුම් නිලධාරී' : 'Head of Department Operations'}
+                      </p>
+                    </div>
+
+                    {/* 2. Location */}
+                    <div className="bg-white rounded-2xl border border-neutral-200/90 p-5 shadow-xs space-y-3 flex flex-col justify-between">
+                      <div className="space-y-2.5">
+                        <div className="w-10 h-10 rounded-xl bg-slate-100 text-neutral-700 flex items-center justify-center border border-neutral-200">
+                          <MapPin className="w-5 h-5 text-emerald-600" />
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
+                            {isSi ? 'ස්ථානය' : 'Location'}
+                          </span>
+                          <p className="text-xs sm:text-sm font-semibold text-neutral-800 leading-snug mt-0.5">
+                            {business.location}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-neutral-500">
+                        {isSi ? 'සඳුදා - සෙනසුරාදා' : 'Open Mon - Sat'}
+                      </p>
+                    </div>
+
+                    {/* 3. Hotline */}
+                    <div className="bg-white rounded-2xl border border-neutral-200/90 p-5 shadow-xs space-y-3 flex flex-col justify-between">
+                      <div className="space-y-2.5">
+                        <div className="w-10 h-10 rounded-xl bg-slate-100 text-neutral-700 flex items-center justify-center border border-neutral-200">
+                          <Phone className="w-5 h-5 text-amber-600" />
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
+                            {isSi ? 'ක්ෂණික ඇමතුම්' : 'Hotline'}
+                          </span>
+                          <p className="font-mono text-sm sm:text-base font-bold text-neutral-900 mt-0.5">
+                            {business.hotline}
+                          </p>
+                        </div>
+                      </div>
                       <a
                         href={`tel:${cleanHotline}`}
-                        className="font-mono text-sm sm:text-base font-bold text-neutral-900 hover:text-[#003399] transition-colors mt-0.5 block"
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-[#003399] hover:underline"
                       >
-                        {business.hotline}
+                        <Phone className="w-3 h-3" />
+                        <span>{isSi ? 'දැන් අමතන්න' : 'Call Now'}</span>
                       </a>
                     </div>
-                  </div>
-                  <a
-                    href={`tel:${cleanHotline}`}
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-[#003399] hover:underline"
-                  >
-                    <Phone className="w-3 h-3" />
-                    <span>{isSi ? 'දැන් අමතන්න' : 'Call Department'}</span>
-                  </a>
-                </div>
-              </>
-            )}
+
+                    {/* 4. Inquiry */}
+                    <div className="bg-white rounded-2xl border border-neutral-200/90 p-5 shadow-xs space-y-3 flex flex-col justify-between">
+                      <div className="space-y-2.5">
+                        <div className="w-10 h-10 rounded-xl bg-slate-100 text-neutral-700 flex items-center justify-center border border-neutral-200">
+                          <HelpCircle className="w-5 h-5 text-purple-600" />
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
+                            {isSi ? 'විමසීම්' : 'General Inquiry'}
+                          </span>
+                          <p className="text-xs font-medium text-neutral-600 mt-0.5">
+                            {isSi ? 'පහත පෝරමයෙන් අප වෙත පණිවිඩයක් එවන්න' : 'Send an inquiry using form below'}
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-[11px] text-[#003399] font-semibold">
+                        {isSi ? 'පැය 24ක් තුළ ප්‍රතිචාර' : 'Response within 24h'}
+                      </span>
+                    </div>
+                  </>
+                );
+              }
+            })()}
 
             {/* 4. Send Inquiry Option */}
             <div className="bg-gradient-to-br from-blue-50 to-indigo-50/60 rounded-2xl border border-blue-200/80 p-5 shadow-xs flex flex-col justify-between space-y-3">

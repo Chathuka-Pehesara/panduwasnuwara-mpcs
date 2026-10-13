@@ -99,7 +99,7 @@ export interface CreateBusinessInput {
   manager?: string;
   location?: string;
   hotline?: string;
-  managers?: { branch?: string; name: string; location?: string; hotline?: string }[];
+  managers?: { branch?: string; name: string; location?: string; hotline?: string; isRegional?: boolean }[];
   image_src?: string;
   cover_image?: string;
   is_new?: boolean;
