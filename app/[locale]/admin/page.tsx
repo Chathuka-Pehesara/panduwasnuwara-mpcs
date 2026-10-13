@@ -12,6 +12,7 @@ import {
   Search,
   LogOut,
   ShieldCheck,
+  ShieldAlert,
   Edit2,
   Trash2,
   X,
@@ -428,6 +429,10 @@ export default function AdminDashboardPage() {
 
   // Open Edit User Modal
   const openEditModal = (user: User) => {
+    if (!isSuperAdmin && (user.role === 'admin' || user.role === 'superadmin')) {
+      alert('Unauthorized: Only Super Administrators can manage Administrator accounts.');
+      return;
+    }
     setEditingUser(user);
     setEditFullName(user.full_name || '');
     setEditNic(user.nic || '');
@@ -453,7 +458,7 @@ export default function AdminDashboardPage() {
           fullName: editFullName,
           nic: editNic,
           phone: editPhone,
-          role: editRole,
+          role: isSuperAdmin ? editRole : undefined,
           password: editPassword || undefined
         })
       });
@@ -474,6 +479,11 @@ export default function AdminDashboardPage() {
 
   // Delete User
   const handleDeleteUser = async (userId: number) => {
+    const targetUser = users.find(u => u.id === userId);
+    if (!isSuperAdmin && targetUser && (targetUser.role === 'admin' || targetUser.role === 'superadmin')) {
+      alert('Unauthorized: Only Super Administrators can delete Administrator accounts.');
+      return;
+    }
     if (!confirm(t('deleteConfirm'))) return;
 
     try {
@@ -756,6 +766,10 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
 
   // Filtered users for search
   const filteredUsers = users.filter(u => {
+    // Non-superadmin admins can only manage regular user accounts
+    if (!isSuperAdmin && (u.role === 'admin' || u.role === 'superadmin')) {
+      return false;
+    }
     const q = searchQuery.toLowerCase();
     return (
       (u.full_name && u.full_name.toLowerCase().includes(q)) ||
@@ -1840,9 +1854,23 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
         {activeTab === 'users' && (
           <div className="bg-white rounded-2xl sm:rounded-3xl border border-neutral-200/90 shadow-2xs p-5 sm:p-6 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <h2 className="font-condensed text-lg font-bold text-neutral-900">
-                {t('usersTab')}
-              </h2>
+              <div>
+                <h2 className="font-condensed text-lg font-bold text-neutral-900 flex items-center gap-2">
+                  <span>{isSuperAdmin ? (locale === 'si' ? 'සියලුම පරිශීලක සහ පරිපාලක ගිණුම්' : 'All User & Admin Accounts') : t('usersTab')}</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-neutral-600 font-normal">
+                    {filteredUsers.length}
+                  </span>
+                </h2>
+                <p className="text-xs text-neutral-500 mt-0.5">
+                  {isSuperAdmin
+                    ? (locale === 'si'
+                        ? 'ප්‍රධාන පරිපාලක බලතල: ඔබට පරිපාලක සහ සාමාජික ගිණුම් දෙකම කළමනාකරණය කළ හැකිය.'
+                        : 'Super Admin: You can manage both Administrator and Registered Member accounts.')
+                    : (locale === 'si'
+                        ? 'පරිශීලක කළමනාකරණය: ඔබට සාමාජික ගිණුම් පමණක් කළමනාකරණය කළ හැකිය.'
+                        : 'User Management: You can manage Registered Member accounts only.')}
+                </p>
+              </div>
 
               <div className="relative max-w-xs w-full">
                 <Search className="w-3.5 h-3.5 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -1889,7 +1917,12 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
                           {user.phone || '—'}
                         </td>
                         <td className="px-4 py-3">
-                          {user.role === 'admin' ? (
+                          {user.role === 'superadmin' ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-amber-500 text-white shadow-2xs">
+                              <ShieldAlert className="w-3 h-3" />
+                              <span>Super Admin</span>
+                            </span>
+                          ) : user.role === 'admin' ? (
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-neutral-900 text-white shadow-2xs">
                               <ShieldCheck className="w-3 h-3 text-neutral-300" />
                               <span>Admin</span>
@@ -1907,22 +1940,28 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
                             : '—'}
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <div className="inline-flex items-center gap-1.5">
-                            <button
-                              onClick={() => openEditModal(user)}
-                              className="p-1.5 rounded-lg text-neutral-600 hover:text-[#003399] hover:bg-slate-100 transition-colors cursor-pointer"
-                              title={t('edit')}
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteUser(user.id)}
-                              className="p-1.5 rounded-lg text-neutral-600 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                              title={t('delete')}
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
+                          {!isSuperAdmin && (user.role === 'admin' || user.role === 'superadmin') ? (
+                            <span className="text-[11px] text-neutral-400 italic">Protected</span>
+                          ) : (
+                            <div className="inline-flex items-center gap-1.5">
+                              <button
+                                onClick={() => openEditModal(user)}
+                                className="p-1.5 rounded-lg text-neutral-600 hover:text-[#003399] hover:bg-slate-100 transition-colors cursor-pointer"
+                                title={t('edit')}
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              {user.username !== 'superadmin' && (
+                                <button
+                                  onClick={() => handleDeleteUser(user.id)}
+                                  className="p-1.5 rounded-lg text-neutral-600 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                                  title={t('delete')}
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </td>
                       </tr>
                     ))
@@ -3427,15 +3466,24 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
 
               <div className="space-y-1">
                 <label className="block text-xs font-bold text-neutral-700">{t('thRole')}</label>
-                <select
-                  value={editRole}
-                  onChange={e => setEditRole(e.target.value as 'user' | 'admin' | 'superadmin')}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-neutral-200 text-xs text-neutral-900 focus:outline-hidden focus:border-[#003399]"
-                >
-                  <option value="user">{t('roleUser')}</option>
-                  <option value="admin">{t('roleAdmin')}</option>
-                  {isSuperAdmin && <option value="superadmin">Super Administrator</option>}
-                </select>
+                {isSuperAdmin ? (
+                  <select
+                    value={editRole}
+                    onChange={e => setEditRole(e.target.value as 'user' | 'admin' | 'superadmin')}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-neutral-200 text-xs text-neutral-900 focus:outline-hidden focus:border-[#003399]"
+                  >
+                    <option value="user">{t('roleUser')}</option>
+                    <option value="admin">{t('roleAdmin')}</option>
+                    <option value="superadmin">Super Administrator</option>
+                  </select>
+                ) : (
+                  <div className="w-full px-3 py-2 rounded-xl bg-slate-100 border border-neutral-200 text-xs text-neutral-600 font-medium">
+                    {editRole === 'admin' ? t('roleAdmin') : editRole === 'superadmin' ? 'Super Administrator' : t('roleUser')}
+                    <span className="ml-2 text-[10px] text-neutral-400 font-normal">
+                      ({locale === 'si' ? 'භූමිකාව වෙනස් කිරීම ප්‍රධාන පරිපාලක සඳහා පමණි' : 'Role changes restricted to Super Admin'})
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-1">

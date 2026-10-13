@@ -1,31 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAllAdmins, createAdminUser, updateUser, deleteUser, findUserById } from '@/lib/models/user';
-
-function getAuth(req: NextRequest): { username: string; role: string; isSuperAdmin: boolean } | null {
-  const token = req.cookies.get('mpcs_admin_token')?.value || req.cookies.get('mpcs_auth_token')?.value;
-  if (!token) return null;
-  try {
-    const parts = token.split('_');
-    if (parts.length >= 3 && parts[0] === 'session') {
-      const username = decodeURIComponent(parts[1]);
-      const role = parts[2];
-      return {
-        username,
-        role,
-        isSuperAdmin: role === 'superadmin'
-      };
-    }
-  } catch {
-    return null;
-  }
-  return null;
-}
+import { requireSuperAdmin } from '@/lib/auth';
 
 // GET: list all administrator accounts (Super Admin only)
 export async function GET(req: NextRequest) {
-  const auth = getAuth(req);
-  if (!auth || !auth.isSuperAdmin) {
-    return NextResponse.json({ success: false, error: 'Unauthorized. Super Admin privileges required.' }, { status: 403 });
+  const { auth, errorResponse } = await requireSuperAdmin(req);
+  if (errorResponse || !auth) {
+    return errorResponse || NextResponse.json({ success: false, error: 'Unauthorized: Super Admin privileges required' }, { status: 403 });
   }
 
   try {
@@ -39,9 +20,9 @@ export async function GET(req: NextRequest) {
 
 // POST: create a new administrator account (Super Admin only)
 export async function POST(req: NextRequest) {
-  const auth = getAuth(req);
-  if (!auth || !auth.isSuperAdmin) {
-    return NextResponse.json({ success: false, error: 'Unauthorized. Super Admin privileges required.' }, { status: 403 });
+  const { auth, errorResponse } = await requireSuperAdmin(req);
+  if (errorResponse || !auth) {
+    return errorResponse || NextResponse.json({ success: false, error: 'Unauthorized: Super Admin privileges required' }, { status: 403 });
   }
 
   try {
@@ -86,9 +67,9 @@ export async function POST(req: NextRequest) {
 
 // PUT: update administrator credentials / permissions (Super Admin only)
 export async function PUT(req: NextRequest) {
-  const auth = getAuth(req);
-  if (!auth || !auth.isSuperAdmin) {
-    return NextResponse.json({ success: false, error: 'Unauthorized. Super Admin privileges required.' }, { status: 403 });
+  const { auth, errorResponse } = await requireSuperAdmin(req);
+  if (errorResponse || !auth) {
+    return errorResponse || NextResponse.json({ success: false, error: 'Unauthorized: Super Admin privileges required' }, { status: 403 });
   }
 
   try {
@@ -125,9 +106,9 @@ export async function PUT(req: NextRequest) {
 
 // DELETE: revoke / remove administrator (Super Admin only)
 export async function DELETE(req: NextRequest) {
-  const auth = getAuth(req);
-  if (!auth || !auth.isSuperAdmin) {
-    return NextResponse.json({ success: false, error: 'Unauthorized. Super Admin privileges required.' }, { status: 403 });
+  const { auth, errorResponse } = await requireSuperAdmin(req);
+  if (errorResponse || !auth) {
+    return errorResponse || NextResponse.json({ success: false, error: 'Unauthorized: Super Admin privileges required' }, { status: 403 });
   }
 
   try {
