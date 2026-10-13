@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { findUserByNicOrUsername, createUser } from '@/lib/models/user';
+import { findUserByNicOrUsername, findUserByNic, createUser } from '@/lib/models/user';
 import { getRecoveryWhatsAppNumber } from '@/lib/models/setting';
 
 function getAuthFromToken(token?: string) {
@@ -150,7 +150,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'NIC and password required' }, { status: 400 });
     }
 
-    const foundUser = await findUserByNicOrUsername(identifier);
+    const foundUser = await findUserByNic(identifier);
 
     if (!foundUser || foundUser.password !== cleanPassword) {
       return NextResponse.json({ success: false, error: 'Invalid NIC or password' }, { status: 401 });

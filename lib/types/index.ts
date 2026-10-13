@@ -73,7 +73,9 @@ export interface BusinessManager {
   name: string;
   location?: string;
   hotline?: string;
+  isRegional?: boolean;
 }
+
 
 export interface BusinessItem {
   id: number;

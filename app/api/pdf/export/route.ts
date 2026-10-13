@@ -95,7 +95,7 @@ export async function GET(req: NextRequest) {
       padding: 0;
       background: #f1f5f9;
       color: #0f172a;
-      font-family: 'Noto Sans Sinhala', 'Iskoola Pota', 'Nirmala UI', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: 'Iskoola Pota', 'Iskoola Potha', 'Noto Sans Sinhala', 'Nirmala UI', sans-serif;
       font-size: 11px;
       line-height: 1.4;
       -webkit-font-smoothing: antialiased;
@@ -384,12 +384,12 @@ export async function GET(req: NextRequest) {
         <div class="doc-branding">
           <img src="/Logo_new.jpeg" alt="MPCS Emblem" class="doc-logo" onerror="this.style.display='none'">
           <div class="doc-titles">
-            <h1>පඬුවස්නුවර විවිධ සේවා සමුපකාර සමිතිය</h1>
-            <h2>Panduwasnuwara Multi-Purpose Co-operative Society Ltd.</h2>
+            <h1>සී/ස පඬුවස්නුවර නව විවිධ සේවා සමූපකාර සමිතිය</h1>
+            <h2>Panduwasnuwara New Multi-Purpose Co-operative Society LTD</h2>
           </div>
         </div>
         <div class="doc-meta-right">
-          <div>ලියාපදිංචි අංකය: <strong>කු/235</strong></div>
+          <div>ලියාපදිංචි අංකය: <strong>කුරු/186</strong></div>
           <div>ලිපිනය: <strong>පඬුවස්නුවර, හෙට්ටිපොළ</strong></div>
           <div>දුරකථන: <strong>037-2291012</strong></div>
           <div>මුද්‍රිත දිනය: <strong>${escapeHtml(printedAt)}</strong></div>
@@ -439,7 +439,7 @@ export async function GET(req: NextRequest) {
 
     <!-- Print Footer Note -->
     <div class="doc-footer-note">
-      <span>පඬුවස්නුවර විවිධ සේවා සමුපකාර සමිතියේ නිල දත්ත පද්ධතිය මඟින් ස්වයංක්‍රීයව ජනනය කරන ලද ලේඛනයකි.</span>
+      <span>සී/ස පඬුවස්නුවර නව විවිධ සේවා සමූපකාර සමිතියේ නිල දත්ත පද්ධතිය මඟින් ස්වයංක්‍රීයව ජනනය කරන ලද ලේඛනයකි.</span>
       <span>පිටුව: <span class="page-number"></span> • මුද්‍රිත දිනය: ${escapeHtml(printedAt)}</span>
     </div>
 

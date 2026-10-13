@@ -1,15 +1,63 @@
 import { supabase } from '@/lib/supabase';
 import { User } from '@/lib/types';
 
+export async function findUserByNic(nicInput: string): Promise<User | null> {
+  const clean = nicInput.trim();
+  if (!clean) return null;
+
+  // Strictly search users table by NIC number
+  const { data, error } = await supabase
+    .from('users')
+    .select('id, username, full_name, nic, phone, email, password, role, created_at')
+    .ilike('nic', clean)
+    .limit(1);
+
+  if (!error && data && data.length > 0) {
+    return data[0] as User;
+  }
+
+  // Fallback check for admin in admin_users
+  interface AdminRow {
+    id: number;
+    username: string;
+    password: string;
+    role: string;
+    created_at: string;
+  }
+
+  const { data: adminData, error: adminError } = await supabase
+    .from('admin_users')
+    .select('id, username, password, role, created_at')
+    .ilike('username', clean)
+    .limit(1);
+
+  if (!adminError && adminData && adminData.length > 0) {
+    const admin = adminData[0] as AdminRow;
+    const isSuper = admin.role === 'superadmin' || admin.username.toLowerCase() === 'superadmin';
+    return {
+      id: admin.id,
+      username: admin.username,
+      full_name: isSuper ? 'Super Administrator' : 'Administrator',
+      nic: isSuper ? 'SUPERADMIN' : 'ADMIN',
+      phone: '',
+      password: admin.password,
+      role: isSuper ? 'superadmin' : 'admin',
+      created_at: admin.created_at
+    };
+  }
+
+  return null;
+}
+
 export async function findUserByNicOrUsername(identifier: string): Promise<User | null> {
   const clean = identifier.trim();
   if (!clean) return null;
 
-  // Search users table by NIC, username, or phone
+  // Search users table by NIC or username
   const { data, error } = await supabase
     .from('users')
     .select('id, username, full_name, nic, phone, email, password, role, created_at')
-    .or(`nic.ilike.${clean},username.ilike.${clean},phone.eq.${clean},email.ilike.${clean}`)
+    .or(`nic.ilike.${clean},username.ilike.${clean}`)
     .limit(1);
 
   if (!error && data && data.length > 0) {

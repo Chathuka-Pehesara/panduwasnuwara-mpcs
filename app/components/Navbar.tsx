@@ -59,6 +59,16 @@ export default function Navbar() {
 
   const checkAuth = async () => {
     try {
+      if (typeof window !== 'undefined' && !sessionStorage.getItem('mpcs_active_session')) {
+        await fetch('/api/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'logout' })
+        }).catch(() => {});
+        setAuth({ isAuthenticated: false, isAdmin: false, user: null });
+        return;
+      }
+
       const res = await fetch('/api/auth');
       const data = await res.json();
       if (data.isAuthenticated) {
@@ -468,21 +478,6 @@ export default function Navbar() {
               )}
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Floating Quick-Toggle to Admin Dashboard */}
-      {auth.isAdmin && !pathname?.includes('/admin') && (
-        <div className="fixed bottom-6 right-6 z-40 hidden sm:block">
-          <Link
-            href={`/${locale}/admin`}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-neutral-900 hover:bg-[#003399] text-white text-xs font-semibold shadow-lg border border-neutral-700 transition-colors cursor-pointer"
-            title="Switch to Admin Dashboard"
-          >
-            <ShieldCheck className="w-4 h-4 text-neutral-300" />
-            <span>{t('dashboard')}</span>
-            <ArrowRight className="w-3.5 h-3.5 text-neutral-400" />
-          </Link>
         </div>
       )}
     </nav>

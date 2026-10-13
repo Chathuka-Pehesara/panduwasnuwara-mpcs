@@ -126,7 +126,7 @@ export default function ContactSection() {
                 <h3 className="font-condensed text-base font-bold text-neutral-900">
                   {isSi ? 'ප්‍රධාන ලේකම් කාර්යාලය' : 'Headquarters & Secretariat'}
                 </h3>
-                <p className="text-xs text-neutral-500">Panduwasnuwara New MPCS Ltd</p>
+                <p className="text-xs text-neutral-500">Panduwasnuwara New MPCS LTD</p>
               </div>
             </div>
 
