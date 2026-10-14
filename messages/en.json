@@ -152,7 +152,9 @@
     "photoId": "Photo Title / Identifier (Optional)",
     "savePhoto": "Save Photo",
     "chooseImage": "Choose Image File (.jpg, .png, .webp)",
-    "imageUrlPlaceholder": "or enter image path / URL"
+    "imageUrlPlaceholder": "or enter image path / URL",
+    "photoDescription": "Description (Optional)",
+    "photoDescriptionPlaceholder": "Enter a description for this photo..."
   },
   "News": {
     "eyebrow": "Official Notices & Updates",

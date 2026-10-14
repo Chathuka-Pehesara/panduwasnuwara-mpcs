@@ -152,7 +152,9 @@
     "photoId": "ඡායාරූප මාතෘකාව / හඳුනාගැනීමේ නාමය (විකල්ප)",
     "savePhoto": "සුරකින්න",
     "chooseImage": "ඡායාරූප ගොනුවක් තෝරන්න (.jpg, .png, .webp)",
-    "imageUrlPlaceholder": "හෝ ඡායාරූප සබැඳිය ඇතුළත් කරන්න"
+    "imageUrlPlaceholder": "හෝ ඡායාරූප සබැඳිය ඇතුළත් කරන්න",
+    "photoDescription": "විස්තරය (විකල්ප)",
+    "photoDescriptionPlaceholder": "මෙම ඡායාරූපය පිළිබඳ විස්තරයක් ඇතුළත් කරන්න..."
   },
   "News": {
     "eyebrow": "නිල නිවේදන සහ යාවත්කාලීන කිරීම්",

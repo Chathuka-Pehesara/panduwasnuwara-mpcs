@@ -41,9 +41,11 @@ async function runMigrations(client) {
       image_src TEXT NOT NULL,
       aspect_ratio VARCHAR(32) DEFAULT '4:3',
       likes_count INT DEFAULT 0,
+      description TEXT,
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
   `);
+  await client.query(`ALTER TABLE gallery_posts ADD COLUMN IF NOT EXISTS description TEXT;`);
 
   // Gallery likes table
   await client.query(`
