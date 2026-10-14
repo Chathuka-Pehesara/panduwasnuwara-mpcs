@@ -146,10 +146,10 @@ export default function BusinessManagementTab() {
     setFormDescSi('');
     setFormDescEn('');
     setFormManager('');
-    setFormLocation('සමිති ගොඩනැගිල්ල, හැට්ටිපොල');
+    setFormLocation('සමිති ගොඩනැගිල්ල, හෙට්ටිපොල');
     setFormHotline('037 229 1012');
     setFormManagers([
-      { branch: '', name: '', location: 'සමිති ගොඩනැගිල්ල, හැට්ටිපොල', hotline: '037 229 1012' }
+      { branch: '', name: '', location: 'සමිති ගොඩනැගිල්ල, හෙට්ටිපොල', hotline: '037 229 1012' }
     ]);
     setFormImageSrc('/Logo_new.jpeg');
     setFormCoverImage('');
@@ -183,13 +183,13 @@ export default function BusinessManagementTab() {
         {
           branch: 'Sales Development Manager',
           name: (b.managers && b.managers[0]?.name) || b.manager || 'එස් එම් රණසිංහ',
-          location: (b.managers && b.managers[0]?.location) || b.location || 'පාරිභෝගික අංශය, සමිති ගොඩනැගිල්ල, හැට්ටිපොල',
+          location: (b.managers && b.managers[0]?.location) || b.location || 'පාරිභෝගික අංශය, සමිති ගොඩනැගිල්ල, හෙට්ටිපොල',
           hotline: (b.managers && b.managers[0]?.hotline) || b.hotline || '037 229 1013'
         },
         {
           branch: 'Store Manager',
           name: (b.managers && b.managers[1]?.name) || '',
-          location: (b.managers && b.managers[1]?.location) || b.location || 'පාරිභෝගික අංශය, සමිති ගොඩනැගිල්ල, හැට්ටිපොල',
+          location: (b.managers && b.managers[1]?.location) || b.location || 'පාරිභෝගික අංශය, සමිති ගොඩනැගිල්ල, හෙට්ටිපොල',
           hotline: (b.managers && b.managers[1]?.hotline) || b.hotline || '037 229 1013'
         }
       ]);
@@ -1239,7 +1239,7 @@ export default function BusinessManagementTab() {
                                   type="text"
                                   value={mgr.branch}
                                   onChange={e => handleUpdateManager(index, 'branch', e.target.value)}
-                                  placeholder={isThisRegional ? (locale === 'si' ? "උදා: හැට්ටිපොල ප්‍රාදේශිකය" : "e.g. Hettipola Regional Branch") : isRural ? (locale === 'si' ? "උදා: හැට්ටිපොල ශාඛාව" : "e.g. Hettipola Branch") : (locale === 'si' ? "උදා: Store Manager" : "e.g. Store Manager")}
+                                  placeholder={isThisRegional ? (locale === 'si' ? "උදා: හෙට්ටිපොල ප්‍රාදේශිකය" : "e.g. Hettipola Regional Branch") : isRural ? (locale === 'si' ? "උදා: හෙට්ටිපොල ශාඛාව" : "e.g. Hettipola Branch") : (locale === 'si' ? "උදා: Store Manager" : "e.g. Store Manager")}
                                   className={`w-full h-9 px-3 py-2 rounded-xl bg-slate-50 border ${isThisRegional ? 'border-emerald-200 focus:border-emerald-600' : 'border-neutral-200 focus:border-[#003399]'} text-xs text-neutral-900 focus:bg-white focus:outline-hidden transition-colors font-medium`}
                                 />
                               </div>
@@ -1273,7 +1273,7 @@ export default function BusinessManagementTab() {
                                   type="text"
                                   value={mgr.location}
                                   onChange={e => handleUpdateManager(index, 'location', e.target.value)}
-                                  placeholder={locale === 'si' ? "උදා: කුරුණෑගල පාර, හැට්ටිපොල" : "e.g. Kurunegala Rd, Hettipola"}
+                                  placeholder={locale === 'si' ? "උදා: කුරුණෑගල පාර, හෙට්ටිපොල" : "e.g. Kurunegala Rd, Hettipola"}
                                   className="w-full h-9 px-3 py-2 rounded-xl bg-slate-50 border border-neutral-200 text-xs text-neutral-900 focus:bg-white focus:border-[#003399] focus:outline-hidden transition-colors"
                                 />
                               </div>

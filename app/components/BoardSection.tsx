@@ -29,7 +29,7 @@ export const boardMembersData: BoardMember[] = [
     qualification: 'B.Com. (Hons) — University of Kelaniya',
     phone: '071 229 1011',
     email: 'member1@mpcs.lk',
-    address: 'කුරුණෑගල පාර, හැට්ටිපොල, ශ්‍රී ලංකා',
+    address: 'කුරුණෑගල පාර, හෙට්ටිපොල, ශ්‍රී ලංකා',
     roleType: 'chairman',
   },
   {
@@ -41,7 +41,7 @@ export const boardMembersData: BoardMember[] = [
     qualification: 'B.Sc. Business Administration — USJP',
     phone: '072 229 1012',
     email: 'member2@mpcs.lk',
-    address: 'කුරුණෑගල පාර, හැට්ටිපොල, ශ්‍රී ලංකා',
+    address: 'කුරුණෑගල පාර, හෙට්ටිපොල, ශ්‍රී ලංකා',
     roleType: 'vice_chairman',
   },
   {

@@ -13,12 +13,12 @@ export const ruralBankBranches: RuralBankBranch[] = [
   {
     id: 1,
     branchNameEn: 'Hettipola Main Branch',
-    branchNameSi: 'හැට්ටිපොල ප්‍රධාන ශාඛාව',
+    branchNameSi: 'හෙට්ටිපොල ප්‍රධාන ශාඛාව',
     managerNameEn: 'K. W. Jayasinghe',
     managerNameSi: 'කේ. ඩබ්. ජයසිංහ',
     hotline: '037 229 1012',
     addressEn: 'Kurunegala Road, Hettipola',
-    addressSi: 'කුරුණෑගල පාර, හැට්ටිපොල'
+    addressSi: 'කුරුණෑගල පාර, හෙට්ටිපොල'
   },
   {
     id: 2,
@@ -58,7 +58,7 @@ export const ruralBankBranches: RuralBankBranch[] = [
     managerNameSi: 'චමින්ද කරුණාරත්න',
     hotline: '037 229 2045',
     addressEn: 'Hettipola Road, Mandapola',
-    addressSi: 'හැට්ටිපොල පාර, මන්දපොල'
+    addressSi: 'හෙට්ටිපොල පාර, මන්දපොල'
   },
   {
     id: 6,
@@ -138,7 +138,7 @@ export const ruralBankBranches: RuralBankBranch[] = [
     managerNameSi: 'අජිත් වික්‍රමසිංහ',
     hotline: '037 229 1198',
     addressEn: 'Kukulnape Center, Hettipola',
-    addressSi: 'කුකුල්නාපේ මධ්‍යය, හැට්ටිපොල'
+    addressSi: 'කුකුල්නාපේ මධ්‍යය, හෙට්ටිපොල'
   },
   {
     id: 14,
@@ -198,7 +198,7 @@ export const ruralBankBranches: RuralBankBranch[] = [
     managerNameSi: 'ප්‍රදීප් අලහකෝන්',
     hotline: '037 229 7832',
     addressEn: 'Gomugomuwa Road, Hettipola',
-    addressSi: 'ගොමුගොමුව පාර, හැට්ටිපොල'
+    addressSi: 'ගොමුගොමුව පාර, හෙට්ටිපොල'
   },
   {
     id: 20,
@@ -228,6 +228,6 @@ export const ruralBankBranches: RuralBankBranch[] = [
     managerNameSi: 'නුවන් පෙරේරා',
     hotline: '037 229 0109',
     addressEn: 'Galgamuwa Road, Hettipola',
-    addressSi: 'ගල්ගමුව පාර, හැට්ටිපොල'
+    addressSi: 'ගල්ගමුව පාර, හෙට්ටිපොල'
   }
 ];

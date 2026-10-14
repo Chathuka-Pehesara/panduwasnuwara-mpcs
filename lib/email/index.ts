@@ -11,7 +11,101 @@ export interface ContactSubmissionPayload {
 }
 
 /**
- * Creates a reusable nodemailer transporter based on environment configuration.
+ * Sends form inquiry to FormSubmit (https://formsubmit.co/ajax/{email})
+ * Delivered directly to destination email configured in the Admin dashboard.
+ */
+async function sendViaFormSubmit(
+  recipient: string,
+  data: ContactSubmissionPayload
+): Promise<{ success: boolean; recipient: string; message?: string }> {
+  try {
+    const origin = process.env.NEXT_PUBLIC_SITE_URL || 'https://panduwasnuwara-mpcs.vercel.app';
+    const payload: Record<string, string> = {
+      'Name': data.name,
+      'Phone Number': data.phone,
+      'Email': data.email || 'Not provided',
+      'Department': data.businessName || 'General Inquiry',
+      'Subject': data.subject || 'Website Contact Form',
+      'Message': data.message,
+      '_subject': `New Inquiry from ${data.name} (${data.phone})`,
+      '_template': 'table',
+      '_captcha': 'false'
+    };
+
+    if (data.email) {
+      payload['_replyto'] = data.email;
+    }
+
+    const res = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(recipient.trim())}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Origin': origin,
+        'Referer': `${origin}/`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const result = await res.json().catch(() => null);
+    console.log(`[FormSubmit] Dispatch to ${recipient}:`, result);
+    return {
+      success: res.ok,
+      recipient,
+      message: result?.message || (res.ok ? 'Sent successfully' : 'Failed to dispatch')
+    };
+  } catch (err: any) {
+    console.error(`[FormSubmit] Error dispatching to ${recipient}:`, err);
+    return {
+      success: false,
+      recipient,
+      message: err.message || 'Network error'
+    };
+  }
+}
+
+/**
+ * Optional Web3Forms dispatch (https://api.web3forms.com/submit)
+ * Activated when WEB3FORMS_ACCESS_KEY is defined in environment variables.
+ */
+async function sendViaWeb3Forms(
+  accessKey: string,
+  data: ContactSubmissionPayload
+): Promise<{ success: boolean; message?: string }> {
+  try {
+    const payload = {
+      access_key: accessKey,
+      name: data.name,
+      email: data.email || 'no-reply@panduwasnuwara.lk',
+      phone: data.phone,
+      subject: `New Inquiry: ${data.name} - ${data.subject || 'Website Message'}`,
+      department: data.businessName || 'General Inquiry',
+      message: data.message,
+      from_name: 'Panduwasnuwara MPCS Web Portal'
+    };
+
+    const res = await fetch('https://api.web3forms.com/submit', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const result = await res.json().catch(() => null);
+    return {
+      success: res.ok && Boolean(result?.success),
+      message: result?.message
+    };
+  } catch (err: any) {
+    console.error('[Web3Forms] Error dispatching:', err);
+    return { success: false, message: err.message };
+  }
+}
+
+/**
+ * Creates a reusable nodemailer transporter if SMTP credentials are provided.
  */
 function createTransporter() {
   const host = process.env.SMTP_HOST || 'smtp.gmail.com';
@@ -20,30 +114,25 @@ function createTransporter() {
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
 
-  if (!user || !pass) {
-    return null;
-  }
+  if (!user || !pass) return null;
 
   return nodemailer.createTransport({
     host,
     port,
     secure,
-    auth: {
-      user,
-      pass
-    }
+    auth: { user, pass }
   });
 }
 
 /**
  * Sends the contact form submission email to the configured destination addresses.
- * Delivers to 1 or 2 addresses as specified in the admin panel settings.
+ * Uses FormSubmit / Web3Forms directly to the emails configured in Admin Settings.
  */
 export async function sendContactNotificationEmail(data: ContactSubmissionPayload): Promise<{
   success: boolean;
   recipients?: string[];
   reason?: string;
-  messageId?: string;
+  results?: any[];
 }> {
   try {
     // 1. Fetch destination emails configured in Admin Panel
@@ -54,69 +143,40 @@ export async function sendContactNotificationEmail(data: ContactSubmissionPayloa
       return { success: false, reason: 'no_recipients_configured' };
     }
 
-    // 2. Format the message exactly as requested
-    const formattedText = `Name: ${data.name}
+    // 2. Dispatch via FormSubmit to all configured recipient emails
+    const formSubmitPromises = recipients.map(email => sendViaFormSubmit(email, data));
+    const formSubmitResults = await Promise.allSettled(formSubmitPromises);
+    const results = formSubmitResults.map(r => r.status === 'fulfilled' ? r.value : { success: false, error: r.reason });
 
-Email: ${data.email || 'Not provided'}
-
-Phone Number: ${data.phone}
-
-Message: ${data.message}
-`;
-
-    // Professional HTML template matching the exact required format
-    const formattedHtml = `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #ffffff;">
-        <div style="border-bottom: 2px solid #003399; padding-bottom: 16px; margin-bottom: 20px;">
-          <h2 style="color: #003399; margin: 0; font-size: 20px;">New Website Contact Inquiry</h2>
-          <p style="color: #64748b; margin: 4px 0 0 0; font-size: 13px;">Panduwasnuwara MPCS Official Website</p>
-        </div>
-
-        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; font-size: 14px; line-height: 1.8; color: #1e293b;">
-          <p style="margin: 0 0 12px 0;"><strong>Name:</strong> ${escapeHtml(data.name)}</p>
-          <p style="margin: 0 0 12px 0;"><strong>Email:</strong> ${data.email ? `<a href="mailto:${escapeHtml(data.email)}" style="color: #003399; text-decoration: underline;">${escapeHtml(data.email)}</a>` : 'Not provided'}</p>
-          <p style="margin: 0 0 12px 0;"><strong>Phone Number:</strong> <a href="tel:${escapeHtml(data.phone.replace(/[^0-9+]/g, ''))}" style="color: #003399; text-decoration: underline;">${escapeHtml(data.phone)}</a></p>
-          <p style="margin: 0 0 6px 0;"><strong>Message:</strong></p>
-          <div style="background-color: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px 16px; white-space: pre-wrap; font-size: 13px; color: #334155;">${escapeHtml(data.message)}</div>
-        </div>
-
-        ${data.businessName ? `<p style="font-size: 11px; color: #94a3b8; margin-top: 16px;">Target Department: ${escapeHtml(data.businessName)}</p>` : ''}
-        <div style="border-top: 1px solid #f1f5f9; margin-top: 24px; padding-top: 12px; font-size: 11px; color: #94a3b8; text-align: center;">
-          Sent automatically via Panduwasnuwara MPCS Web Portal
-        </div>
-      </div>
-    `;
-
-    // 3. Initialize mailer
-    const transporter = createTransporter();
-    const fromAddress = process.env.SMTP_FROM || `"Panduwasnuwara MPCS" <${process.env.SMTP_USER || 'no-reply@panduwasnuwara.lk'}>`;
-
-    if (!transporter) {
-      console.warn('[Email Notification] SMTP credentials (SMTP_USER / SMTP_PASS) not set in environment. Destination emails:', recipients);
-      console.log('--- EMAIL CONTENT PREVIEW ---');
-      console.log(`To: ${recipients.join(', ')}`);
-      console.log(formattedText);
-      console.log('-----------------------------');
-      return { success: false, reason: 'smtp_not_configured', recipients };
+    // 3. If Web3Forms access key is configured, also dispatch through Web3Forms
+    const web3Key = process.env.WEB3FORMS_ACCESS_KEY;
+    if (web3Key) {
+      sendViaWeb3Forms(web3Key, data).catch(err => {
+        console.error('[Web3Forms] Background dispatch error:', err);
+      });
     }
 
-    // 4. Dispatch to all configured recipients (works for 1 or 2 addresses)
-    const mailOptions = {
-      from: fromAddress,
-      to: recipients.join(', '),
-      replyTo: data.email || undefined,
-      subject: `New Inquiry: ${data.name} - ${data.subject || 'Website Message'}`,
-      text: formattedText,
-      html: formattedHtml
-    };
-
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`[Email Notification] Successfully sent inquiry to [${recipients.join(', ')}] Message ID: ${info.messageId}`);
+    // 4. If SMTP transporter is configured, send via SMTP in parallel as fallback
+    const transporter = createTransporter();
+    if (transporter) {
+      try {
+        const fromAddress = process.env.SMTP_FROM || `"Panduwasnuwara MPCS" <${process.env.SMTP_USER}>`;
+        await transporter.sendMail({
+          from: fromAddress,
+          to: recipients.join(', '),
+          replyTo: data.email || undefined,
+          subject: `New Inquiry: ${data.name} - ${data.subject || 'Website Message'}`,
+          text: `Name: ${data.name}\nPhone: ${data.phone}\nEmail: ${data.email || 'Not provided'}\nDepartment: ${data.businessName || 'General'}\n\nMessage:\n${data.message}`
+        });
+      } catch (smtpErr) {
+        console.warn('[SMTP Notification] Transporter error:', smtpErr);
+      }
+    }
 
     return {
       success: true,
       recipients,
-      messageId: info.messageId
+      results
     };
   } catch (err: any) {
     console.error('[Email Notification] Error dispatching inquiry email:', err);
@@ -127,11 +187,28 @@ Message: ${data.message}
   }
 }
 
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+/**
+ * Dispatches a test inquiry to verify FormSubmit activation & delivery.
+ */
+export async function sendTestNotificationEmail(targetEmail?: string): Promise<{
+  success: boolean;
+  recipients: string[];
+  results: any[];
+}> {
+  const recipients = targetEmail ? [targetEmail.trim()] : await getContactNotificationEmails();
+  const testPayload: ContactSubmissionPayload = {
+    name: 'MPCS Test Service',
+    email: 'test@panduwasnuwarampcs.lk',
+    phone: '037 229 1012',
+    subject: 'FormSubmit Service Activation & Test Message',
+    businessName: 'Head Office Administration',
+    message: 'This is a test notification confirming that contact form submissions on the Panduwasnuwara MPCS portal are successfully delivered to this email address.'
+  };
+
+  const results = await Promise.all(recipients.map(email => sendViaFormSubmit(email, testPayload)));
+  return {
+    success: results.some(r => r.success),
+    recipients,
+    results
+  };
 }
