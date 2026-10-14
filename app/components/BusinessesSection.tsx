@@ -61,7 +61,7 @@ export const businessesData: BusinessService[] = [
       'Loan Repayment Orders'
     ],
     manager: 'කේ ඩබ් ජදසිංහ (Manager)',
-    location: 'සමිති ගොඩනැගිල්ල, කුරුණෑගල පාර, හැට්ටිපොල',
+    location: 'සමිති ගොඩනැගිල්ල, කුරුණෑගල පාර, හෙට්ටිපොල',
     hotline: '037 229 1012',
     imageSrc: '/images/sections/rural-bank.png',
   },
@@ -90,26 +90,26 @@ export const businessesData: BusinessService[] = [
       'Fair-priced Essential Goods'
     ],
     manager: 'එස් එම් රණසිංහ (Sales Development Manager)',
-    location: 'පාරිභෝගික අංශය, සමිති ගොඩනැගිල්ල, හැට්ටිපොල',
+    location: 'පාරිභෝගික අංශය, සමිති ගොඩනැගිල්ල, හෙට්ටිපොල',
     hotline: '037 229 1013',
     imageSrc: '/images/sections/consumer.png',
     managers: [
       {
         branch: 'Sales Development Manager',
         name: 'එස් එම් රණසිංහ',
-        location: 'පාරිභෝගික අංශය, සමිති ගොඩනැගිල්ල, හැට්ටිපොල',
+        location: 'පාරිභෝගික අංශය, සමිති ගොඩනැගිල්ල, හෙට්ටිපොල',
         hotline: '037 229 1013'
       },
       {
         branch: 'Store Manager',
         name: 'නිමාලි සංජීවනී',
-        location: 'පාරිභෝගික අංශය, සමිති ගොඩනැගිල්ල, හැට්ටිපොල',
+        location: 'පාරිභෝගික අංශය, සමිති ගොඩනැගිල්ල, හෙට්ටිපොල',
         hotline: '0705268848'
       },
       {
-        branch: 'හැට්ටිපොල ප්‍රාදේශිකය',
+        branch: 'හෙට්ටිපොල ප්‍රාදේශිකය',
         name: 'කේ. ඒ. පෙරේරා',
-        location: 'හැට්ටිපොල',
+        location: 'හෙට්ටිපොල',
         hotline: '037 229 1013',
         isRegional: true
       },
@@ -147,7 +147,7 @@ export const businessesData: BusinessService[] = [
       'Shop Support Services'
     ],
     manager: 'ඩබ් පී සිල්වා (Manager)',
-    location: 'නියෝජිතායතන ගබදාව, කුරුණෑගල පාර, හැට්ටිපොල',
+    location: 'නියෝජිතායතන ගබදාව, කුරුණෑගල පාර, හෙට්ටිපොල',
     hotline: '037 229 1014',
     imageSrc: '/images/sections/maliban-biscuits.png',
   },
@@ -176,7 +176,7 @@ export const businessesData: BusinessService[] = [
       'Retail Promotions'
     ],
     manager: 'ඒ එල් පෙරේරා (Manager)',
-    location: 'නියෝජිතායතන ගබදාව, කුරුණෑගල පාර, හැට්ටිපොල',
+    location: 'නියෝජිතායතන ගබදාව, කුරුණෑගල පාර, හෙට්ටිපොල',
     hotline: '037 229 1015',
     imageSrc: '/images/sections/maliban-kiri.png',
   },
@@ -205,7 +205,7 @@ export const businessesData: BusinessService[] = [
       'Seasonal Promotions'
     ],
     manager: 'එම් ඩබ් ප්‍රනාන්දු (Manager)',
-    location: 'ප්‍රධාන කාර්යාලය, කුරුණෑගල පාර, හැට්ටිපොල',
+    location: 'ප්‍රධාන කාර්යාලය, කුරුණෑගල පාර, හෙට්ටිපොල',
     hotline: '037 229 1016',
     imageSrc: '/images/sections/nature-secrets.png',
   },
@@ -234,7 +234,7 @@ export const businessesData: BusinessService[] = [
       'Member Special Offers'
     ],
     manager: 'බී ජී කුමාරි (Manager)',
-    location: 'ප්‍රධාන කාර්යාලය, කුරුණෑගල පාර, හැට්ටිපොල',
+    location: 'ප්‍රධාන කාර්යාලය, කුරුණෑගල පාර, හෙට්ටිපොල',
     hotline: '037 229 1017',
     imageSrc: '/images/sections/hemas.png',
   },
@@ -261,7 +261,7 @@ export const businessesData: BusinessService[] = [
       'Timely Delivery'
     ],
     manager: 'ඩී එස් රත්නායක (Manager)',
-    location: 'නියෝජිතායතන ගබදාව, කුරුණෑගල පාර, හැට්ටිපොල',
+    location: 'නියෝජිතායතන ගබදාව, කුරුණෑගල පාර, හෙට්ටිපොල',
     hotline: '037 229 1018',
     imageSrc: '/images/sections/ristbury-tiara.png',
   },
@@ -288,7 +288,7 @@ export const businessesData: BusinessService[] = [
       'Air & Water Services'
     ],
     manager: 'එච් එම් බණ්ඩාර (Manager)',
-    location: 'කුරුණෑගල පාර හංදිය, හැට්ටිපොල',
+    location: 'කුරුණෑගල පාර හංදිය, හෙට්ටිපොල',
     hotline: '037 229 1019',
     imageSrc: '/images/sections/fuel-station.png',
     isNew: true,
@@ -314,7 +314,7 @@ export const businessesData: BusinessService[] = [
       'Affordable Funeral Equipment'
     ],
     manager: 'ටී එම් විජේසිංහ (Manager)',
-    location: 'සමිති ගොඩනැගිල්ල, කුරුණෑගල පාර, හැට්ටිපොල',
+    location: 'සමිති ගොඩනැගිල්ල, කුරුණෑගල පාර, හෙට්ටිපොල',
     hotline: '037 229 1020',
     imageSrc: '/images/sections/funeral.png',
   },
