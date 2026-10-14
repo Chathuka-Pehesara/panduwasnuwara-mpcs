@@ -108,6 +108,8 @@ export default function AdminDashboardPage() {
   const [hasSmtpConfigured, setHasSmtpConfigured] = useState(false);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [settingsSuccess, setSettingsSuccess] = useState(false);
+  const [isTestingEmail, setIsTestingEmail] = useState(false);
+  const [testEmailFeedback, setTestEmailFeedback] = useState<string | null>(null);
 
   // Fuel Price Management State
   const [adminFuelPrices, setAdminFuelPrices] = useState<Record<string, number>>({
@@ -655,6 +657,37 @@ export default function AdminDashboardPage() {
       console.error('Failed to save settings:', err);
     } finally {
       setIsSavingSettings(false);
+    }
+  };
+
+  // Test / Activate FormSubmit Delivery
+  const handleSendTestEmail = async () => {
+    if (!contactEmail1.trim() && !contactEmail2.trim()) {
+      alert(locale === 'si' ? 'කරුණාකර පළමුව ඊමේල් ලිපිනයක් ඇතුළත් කරන්න.' : 'Please enter at least one email address first.');
+      return;
+    }
+    setIsTestingEmail(true);
+    setTestEmailFeedback(null);
+    try {
+      const res = await fetch('/api/admin/settings/test-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: contactEmail1.trim() || contactEmail2.trim() })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTestEmailFeedback(
+          locale === 'si'
+            ? 'පරීක්ෂණ පණිවිඩය FormSubmit වෙත යොමු කරන ලදී! ඔබේ ඊමේල් ලිපිනය සඳහා මෙය පළමු වර නම්, කරුණාකර Inbox පරීක්ෂා කර "Activate Form" සබැඳිය ක්ලික් කරන්න.'
+            : 'Test message sent via FormSubmit! If this is the first time using this email with FormSubmit, check your inbox and click the "Activate Form" link.'
+        );
+      } else {
+        setTestEmailFeedback(data.error || 'Failed to dispatch test message.');
+      }
+    } catch {
+      setTestEmailFeedback('Network error sending test message.');
+    } finally {
+      setIsTestingEmail(false);
     }
   };
 
@@ -2882,17 +2915,15 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
                       {locale === 'si' ? 'වෙබ් විමසීම් දැනුම්දීමේ ඊමේල් ලිපින' : 'Contact Form Submission Emails'}
                     </label>
                   </div>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    hasSmtpConfigured ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700'
-                  }`}>
-                    {hasSmtpConfigured ? 'SMTP Mailer Configured' : 'SMTP Inactive (Set in .env.local)'}
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                    FormSubmit Active (Automatic Delivery)
                   </span>
                 </div>
 
                 <p className="text-xs text-neutral-500 leading-relaxed">
                   {locale === 'si'
-                    ? 'පාරිභෝගිකයින් විසින් වෙබ් අඩවියේ විමසීම් පෝරමය හරහා යොමු කරනු ලබන පණිවිඩ පහත සඳහන් ඊමේල් ලිපින වෙත සෘජුවම යොමු කෙරේ. මෙහි එක් ලිපිනයක් හෝ ලිපින දෙකම ඇතුළත් කළ හැක.'
-                    : 'Inquiries submitted through the website contact form will be automatically delivered to the email addresses specified below. Works whether one or both emails are added.'}
+                    ? 'පාරිභෝගිකයින් විසින් වෙබ් අඩවියේ විමසීම් පෝරමය හරහා යොමු කරනු ලබන පණිවිඩ FormSubmit (https://formsubmit.co) මගින් පහත සඳහන් ඊමේල් ලිපින වෙත සෘජුවම යොමු කෙරේ. කිසිදු SMTP හෝ සේවාදායක සැකසුමක් අවශ්‍ය නොවේ.'
+                    : 'Inquiries submitted through the website contact form are automatically delivered to the email addresses specified below via FormSubmit (https://formsubmit.co). No SMTP or complex server setup required.'}
                 </p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -2929,6 +2960,35 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
                   </div>
                 </div>
 
+                {/* Test & Activation Action */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-blue-50/70 border border-blue-200/80">
+                  <div className="space-y-0.5">
+                    <div className="text-xs font-bold text-blue-950 flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[#003399]" />
+                      <span>FormSubmit Activation & Testing</span>
+                    </div>
+                    <p className="text-[11px] text-blue-800 leading-relaxed">
+                      {locale === 'si'
+                        ? 'පළමු වරට නව ඊමේල් ලිපිනයක් ඇතුළත් කළ විට, FormSubmit වෙතින් "Activate Form" සබැඳියක් සහිත ඊමේල් එකක් ලැබෙනු ඇත. එය එකවරක් ක්ලික් කර සක්‍රිය කරන්න.'
+                        : 'When using an email for the first time with FormSubmit, you will receive an "Activate Form" verification link in your inbox. Click it once to activate.'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleSendTestEmail}
+                    disabled={isTestingEmail || (!contactEmail1 && !contactEmail2)}
+                    className="px-3.5 py-2 rounded-lg bg-[#003399] hover:bg-[#002266] text-white text-xs font-semibold shrink-0 transition-colors disabled:opacity-50 cursor-pointer shadow-2xs"
+                  >
+                    {isTestingEmail ? 'Sending...' : 'Send Test / Activate'}
+                  </button>
+                </div>
+
+                {testEmailFeedback && (
+                  <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 leading-relaxed">
+                    {testEmailFeedback}
+                  </div>
+                )}
+
                 {/* Delivery Configuration Summary & Format Preview */}
                 <div className="p-3.5 rounded-xl bg-slate-50 border border-neutral-200 text-xs space-y-2">
                   <div className="flex items-center gap-1.5 font-bold text-neutral-700">
@@ -2946,11 +3006,12 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
                   </div>
 
                   <div className="text-[11px] text-neutral-600 font-mono bg-white p-2.5 rounded-lg border border-neutral-200 leading-relaxed">
-                    <div className="font-bold text-neutral-700 mb-1">Standard Message Format Delivered:</div>
-                    Name: Induwara<br /><br />
+                    <div className="font-bold text-neutral-700 mb-1">Standard Message Format Delivered to Inbox:</div>
+                    Name: Induwara Thathsara<br /><br />
+                    Phone Number: 076 424 7716<br /><br />
                     Email: induwara@gmail.com<br /><br />
-                    Phone Number: 019283839<br /><br />
-                    Message: iwhwbenwsksish
+                    Department: General Society Inquiries<br /><br />
+                    Message: Customer inquiry text...
                   </div>
                 </div>
               </div>
