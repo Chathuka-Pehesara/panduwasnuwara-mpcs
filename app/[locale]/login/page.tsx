@@ -29,8 +29,10 @@ export default function LoginPage() {
 
   const checkStatus = async () => {
     try {
-      // If there is no active tab session, prevent using cached or stale session
-      if (typeof window !== 'undefined' && !sessionStorage.getItem('mpcs_active_session')) {
+      const hasActiveSession = typeof window !== 'undefined' && Boolean(sessionStorage.getItem('mpcs_active_session'));
+
+      // If there is no active tab session, prevent using cached or stale server session
+      if (!hasActiveSession) {
         await fetch('/api/auth', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -39,14 +41,18 @@ export default function LoginPage() {
         setIsAuthenticated(false);
         setCurrentUser(null);
         setIsAdmin(false);
-        return;
       }
 
       const res = await fetch('/api/auth', {
         headers: { 'Cache-Control': 'no-cache' }
       });
       const data = await res.json();
-      if (data.isAuthenticated) {
+
+      if (data.recoveryWhatsAppNumber) {
+        setRecoveryWhatsAppNumber(data.recoveryWhatsAppNumber);
+      }
+
+      if (hasActiveSession && data.isAuthenticated) {
         setIsAuthenticated(true);
         setCurrentUser(data.user);
         setIsAdmin(Boolean(data.isAdmin));
@@ -58,9 +64,6 @@ export default function LoginPage() {
         setIsAuthenticated(false);
         setCurrentUser(null);
         setIsAdmin(false);
-      }
-      if (data.recoveryWhatsAppNumber) {
-        setRecoveryWhatsAppNumber(data.recoveryWhatsAppNumber);
       }
     } catch {
       setIsAuthenticated(false);
@@ -143,10 +146,35 @@ export default function LoginPage() {
     setCurrentUser(null);
   };
 
+  const openForgotModal = async () => {
+    setShowForgotModal(true);
+    try {
+      const res = await fetch('/api/auth', { headers: { 'Cache-Control': 'no-cache' } });
+      const data = await res.json();
+      if (data?.recoveryWhatsAppNumber) {
+        setRecoveryWhatsAppNumber(data.recoveryWhatsAppNumber);
+      }
+    } catch {
+      // Ignore
+    }
+  };
+
   // WhatsApp Forgot Password Dispatcher
-  const handleSendWhatsAppReset = (e: React.FormEvent) => {
+  const handleSendWhatsAppReset = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!forgotName.trim() || !forgotNic.trim() || !forgotPhone.trim()) return;
+
+    let targetNumber = recoveryWhatsAppNumber;
+    try {
+      const res = await fetch('/api/auth', { headers: { 'Cache-Control': 'no-cache' } });
+      const data = await res.json();
+      if (data?.recoveryWhatsAppNumber) {
+        targetNumber = data.recoveryWhatsAppNumber;
+        setRecoveryWhatsAppNumber(targetNumber);
+      }
+    } catch {
+      // Use existing recoveryWhatsAppNumber state
+    }
 
     // Exact format required:
     // name - induwara
@@ -156,7 +184,7 @@ export default function LoginPage() {
     const message = `name - ${forgotName.trim()}\n\nnic - ${forgotNic.trim()}\n\nphone number - ${forgotPhone.trim()}\n\nforgot password`;
     
     // Clean target WhatsApp number (digits only)
-    const cleanNumber = recoveryWhatsAppNumber.replace(/[^0-9]/g, '');
+    const cleanNumber = targetNumber.replace(/[^0-9]/g, '');
     const url = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`;
     
     window.open(url, '_blank');
@@ -262,7 +290,7 @@ export default function LoginPage() {
                 </label>
                 <button
                   type="button"
-                  onClick={() => setShowForgotModal(true)}
+                  onClick={openForgotModal}
                   className="text-[11px] font-semibold text-[#003399] hover:underline cursor-pointer"
                 >
                   {t('forgotPassword')}
