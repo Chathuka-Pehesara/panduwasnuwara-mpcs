@@ -192,6 +192,7 @@ export default function AdminDashboardPage() {
   const [galleryImageUrlInput, setGalleryImageUrlInput] = useState('');
   const [galleryAspectRatio, setGalleryAspectRatio] = useState('4:3');
   const [galleryCustomId, setGalleryCustomId] = useState('');
+  const [galleryDescription, setGalleryDescription] = useState('');
   const [isSavingGallery, setIsSavingGallery] = useState(false);
   const [galleryError, setGalleryError] = useState('');
 
@@ -535,6 +536,7 @@ export default function AdminDashboardPage() {
     setGalleryImageUrlInput('');
     setGalleryAspectRatio('4:3');
     setGalleryCustomId('');
+    setGalleryDescription('');
     setGalleryError('');
     setIsGalleryModalOpen(true);
   };
@@ -547,6 +549,7 @@ export default function AdminDashboardPage() {
     setGalleryImageUrlInput(post.imageSrc);
     setGalleryAspectRatio(post.aspectRatio || '4:3');
     setGalleryCustomId(post.id);
+    setGalleryDescription(post.description || '');
     setGalleryError('');
     setIsGalleryModalOpen(true);
   };
@@ -575,6 +578,7 @@ export default function AdminDashboardPage() {
         formData.append('id', galleryCustomId.trim());
       }
       formData.append('aspect_ratio', galleryAspectRatio);
+      formData.append('description', galleryDescription.trim());
 
       if (galleryImageFile) {
         formData.append('image', galleryImageFile);
@@ -2742,6 +2746,7 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
                   const q = gallerySearchQuery.toLowerCase();
                   return (
                     post.id.toLowerCase().includes(q) ||
+                    (post.description && post.description.toLowerCase().includes(q)) ||
                     post.comments.some(c => c.author.toLowerCase().includes(q) || c.text.toLowerCase().includes(q))
                   );
                 })
@@ -2775,6 +2780,11 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
                               {post.aspectRatio || '4:3'}
                             </span>
                           </div>
+                          {post.description && (
+                            <p className="text-xs text-neutral-600 mt-1 max-w-xl line-clamp-2">
+                              {post.description}
+                            </p>
+                          )}
                           <p className="text-[11px] text-neutral-500 font-mono mt-0.5">
                             {post.likesCount} Likes • {post.comments.length} Comments
                           </p>
@@ -3872,6 +3882,20 @@ MEM-003,200155609876,W. P. Kasun Priyantha,"Station Road, Panduwasnuwara","Stati
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Description Field */}
+              <div className="space-y-1">
+                <label className="block text-xs font-bold text-neutral-700">
+                  Description (Optional)
+                </label>
+                <textarea
+                  value={galleryDescription}
+                  onChange={e => setGalleryDescription(e.target.value)}
+                  placeholder="Enter a description for this photo..."
+                  rows={3}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-neutral-200 text-xs text-neutral-900 focus:outline-hidden focus:border-[#003399] resize-none"
+                />
               </div>
 
               {/* Image Preview & Upload */}
