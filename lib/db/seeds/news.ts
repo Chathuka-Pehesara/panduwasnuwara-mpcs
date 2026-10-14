@@ -16,7 +16,7 @@ export const INITIAL_NEWS = [
 සමූපකාර සේවා කොමිෂන් සභා චක්‍රලේඛ අනුව ආකර්ශනීය මූලික වැටුපක්, අතිකාල (OT) සහ සුභසාධන ප්‍රතිලාභ හිමිවේ.
 
 අයදුම් කළ යුතු ආකාරය:
-ඔබගේ ජීව දත්ත පත්‍රිකාව (CV) සහ රියදුරු බලපත්‍රයේ පිටපතක් සමඟ ප්‍රධාන කාර්යාලයට (කුරුණෑගල පාර, හැට්ටිපොල) පැමිණ හෝ විද්‍යුත් තැපෑල (panduwasnuwara@mpcs.lk) මගින් යොමු කරන්න. වැඩිදුර විස්තර සඳහා අමතන්න: 037 229 1011 / 076 424 7716.`,
+ඔබගේ ජීව දත්ත පත්‍රිකාව (CV) සහ රියදුරු බලපත්‍රයේ පිටපතක් සමඟ ප්‍රධාන කාර්යාලයට (කුරුණෑගල පාර, හෙට්ටිපොල) පැමිණ හෝ විද්‍යුත් තැපෑල (panduwasnuwara@mpcs.lk) මගින් යොමු කරන්න. වැඩිදුර විස්තර සඳහා අමතන්න: 037 229 1011 / 076 424 7716.`,
     descriptionEn: `Panduwasnuwara Multi-Purpose Co-operative Society (MPCS) invites applications from energetic, experienced, and qualified Sri Lankan citizens for the post of Heavy Vehicle & Distribution Drivers for our logistics and retail distribution network.
 
 Key Requirements:

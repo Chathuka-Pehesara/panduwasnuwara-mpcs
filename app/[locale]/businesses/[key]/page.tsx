@@ -254,8 +254,8 @@ export default function BusinessDetailPage() {
               </h2>
               <p className="text-xs sm:text-sm text-neutral-600">
                 {isSi
-                  ? 'හැට්ටිපොල සමුපකාර ඉන්ධන පිරවුම්හලේ අද දින ලීටරයක සිල්ලර මිල ගණන් මෙහි දැක්වේ.'
-                  : 'Official retail price per liter at our Hattipola Co-operative Fuel Station.'}
+                  ? 'හෙට්ටිපොල සමුපකාර ඉන්ධන පිරවුම්හලේ අද දින ලීටරයක සිල්ලර මිල ගණන් මෙහි දැක්වේ.'
+                  : 'Official retail price per liter at our Hettipola Co-operative Fuel Station.'}
               </p>
             </div>
 

@@ -601,7 +601,7 @@ export default function BoardManagementTab({ onCountChange }: BoardManagementTab
                   type="text"
                   value={address}
                   onChange={e => setAddress(e.target.value)}
-                  placeholder="e.g. කුරුණෑගල පාර, හැට්ටිපොල, ශ්‍රී ලංකා"
+                  placeholder="e.g. කුරුණෑගල පාර, හෙට්ටිපොල, ශ්‍රී ලංකා"
                   className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-neutral-200 text-xs text-neutral-900 focus:outline-hidden focus:border-[#003399]"
                 />
               </div>
