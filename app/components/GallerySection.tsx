@@ -32,6 +32,7 @@ export interface GalleryPost {
   likesCount: number;
   hasLiked: boolean;
   comments: GalleryComment[];
+  description?: string | null;
 }
 
 export default function GallerySection() {
@@ -57,6 +58,7 @@ export default function GallerySection() {
   const [photoImageUrlInput, setPhotoImageUrlInput] = useState('');
   const [photoAspectRatio, setPhotoAspectRatio] = useState('4:3');
   const [photoCustomId, setPhotoCustomId] = useState('');
+  const [photoDescription, setPhotoDescription] = useState('');
   const [isSavingPhoto, setIsSavingPhoto] = useState(false);
   const [photoError, setPhotoError] = useState('');
 
@@ -67,6 +69,7 @@ export default function GallerySection() {
     setPhotoImageUrlInput('');
     setPhotoAspectRatio('4:3');
     setPhotoCustomId('');
+    setPhotoDescription('');
     setPhotoError('');
     setIsPhotoModalOpen(true);
   };
@@ -79,6 +82,7 @@ export default function GallerySection() {
     setPhotoImageUrlInput(post.imageSrc);
     setPhotoAspectRatio(post.aspectRatio || '4:3');
     setPhotoCustomId(post.id);
+    setPhotoDescription(post.description || '');
     setPhotoError('');
     setIsPhotoModalOpen(true);
   };
@@ -105,6 +109,7 @@ export default function GallerySection() {
         formData.append('id', photoCustomId.trim());
       }
       formData.append('aspect_ratio', photoAspectRatio);
+      formData.append('description', photoDescription.trim());
 
       if (photoImageFile) {
         formData.append('image', photoImageFile);
@@ -466,6 +471,14 @@ export default function GallerySection() {
                   )}
                 </div>
 
+                {post.description && (
+                  <div className="px-4 sm:px-5 pt-3 pb-1">
+                    <p className="text-xs text-neutral-600 line-clamp-2">
+                      {post.description}
+                    </p>
+                  </div>
+                )}
+
                 <div className="p-4 sm:p-5 flex items-center justify-between border-t border-neutral-100">
                   <button
                     onClick={(e) => handleToggleLike(post, e)}
@@ -545,6 +558,14 @@ export default function GallerySection() {
                 </button>
               </div>
             </div>
+
+            {activePost.description && (
+              <div className="px-6 py-3.5 bg-slate-50/80 border-b border-neutral-100">
+                <p className="text-xs sm:text-sm text-neutral-700 leading-relaxed">
+                  {activePost.description}
+                </p>
+              </div>
+            )}
 
             <div className="p-6 overflow-y-auto space-y-4 flex-1 custom-scrollbar">
               {activePost.comments.length === 0 ? (
@@ -754,6 +775,20 @@ export default function GallerySection() {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Description Field */}
+              <div className="space-y-1">
+                <label className="block text-xs font-bold text-neutral-700">
+                  {t('photoDescription')}
+                </label>
+                <textarea
+                  value={photoDescription}
+                  onChange={e => setPhotoDescription(e.target.value)}
+                  placeholder={t('photoDescriptionPlaceholder')}
+                  rows={3}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-neutral-200 text-xs text-neutral-900 focus:outline-hidden focus:border-[#003399] resize-none"
+                />
               </div>
 
               {/* Image Preview & Upload */}

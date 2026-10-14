@@ -64,6 +64,7 @@ export async function POST(req: NextRequest) {
       const rawId = formData.get('id') as string;
       const customId = rawId ? rawId.trim() : undefined;
       const aspectRatio = (formData.get('aspect_ratio') as string) || '4:3';
+      const description = formData.get('description') as string | null;
       let imageSrc = (formData.get('image_src') as string) || '';
 
       const file = formData.get('image') as File | null;
@@ -123,7 +124,8 @@ export async function POST(req: NextRequest) {
       const post = await createGalleryPost({
         id: customId,
         image_src: imageSrc,
-        aspect_ratio: aspectRatio
+        aspect_ratio: aspectRatio,
+        description
       });
 
       return NextResponse.json({
@@ -151,7 +153,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: false, error: 'Unauthorized: Admin authentication required' }, { status: 401 });
       }
 
-      const { image_src, aspect_ratio, id } = body;
+      const { image_src, aspect_ratio, id, description } = body;
       if (!image_src?.trim()) {
         return NextResponse.json({ success: false, error: 'Image source is required' }, { status: 400 });
       }
@@ -159,7 +161,8 @@ export async function POST(req: NextRequest) {
       const post = await createGalleryPost({
         id: id?.trim(),
         image_src: image_src.trim(),
-        aspect_ratio: aspect_ratio || '4:3'
+        aspect_ratio: aspect_ratio || '4:3',
+        description: description?.trim() || null
       });
 
       return NextResponse.json({
@@ -218,6 +221,7 @@ export async function PUT(req: NextRequest) {
     let postId = '';
     let imageSrc: string | undefined;
     let aspectRatio: string | undefined;
+    let description: string | undefined;
 
     if (contentType.includes('multipart/form-data')) {
       const formData = await req.formData();
@@ -225,6 +229,11 @@ export async function PUT(req: NextRequest) {
       aspectRatio = (formData.get('aspect_ratio') as string) || undefined;
       const rawImageSrc = (formData.get('image_src') as string) || '';
       if (rawImageSrc.trim()) imageSrc = rawImageSrc.trim();
+
+      const descField = formData.get('description');
+      if (descField !== null) {
+        description = (descField as string).trim();
+      }
 
       const file = formData.get('image') as File | null;
       if (file && file.size > 0) {
@@ -280,6 +289,9 @@ export async function PUT(req: NextRequest) {
       postId = body.id;
       imageSrc = body.image_src;
       aspectRatio = body.aspect_ratio;
+      if (body.description !== undefined) {
+        description = body.description;
+      }
     }
 
     if (!postId) {
@@ -288,7 +300,8 @@ export async function PUT(req: NextRequest) {
 
     const updated = await updateGalleryPost(postId, {
       image_src: imageSrc,
-      aspect_ratio: aspectRatio
+      aspect_ratio: aspectRatio,
+      description
     });
 
     if (!updated) {

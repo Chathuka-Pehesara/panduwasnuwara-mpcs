@@ -25,6 +25,7 @@ export interface GalleryPost {
   likesCount: number;
   hasLiked: boolean;
   comments: GalleryComment[];
+  description?: string | null;
 }
 
 export interface SystemSetting {
